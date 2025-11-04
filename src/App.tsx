@@ -9,6 +9,7 @@ import Settings from './pages/admin/Settings';
 import Home from './pages/user/Home';
 import ArticleDetail from './pages/user/ArticleDetail';
 import Category from './pages/user/Category';
+import Login from './pages/Login';
 
 function App() {
   return (
@@ -16,8 +17,10 @@ function App() {
       <Routes>
         <Route path="/" element={<UserLayout />}>
           <Route index element={<Home />} />
+          <Route path='login' element={<Login/>} />
           <Route path="article/:id" element={<ArticleDetail />} />
           <Route path="category/:id" element={<Category />} />
+
         </Route>
 
         <Route path="/admin" element={<AdminLayout />}>
@@ -27,6 +30,7 @@ function App() {
           <Route path="articles" element={<Articles />} />
           <Route path="categories" element={<Categories />} />
           <Route path="settings" element={<Settings />} />
+          
         </Route>
       </Routes>
     </BrowserRouter>
