@@ -1,4 +1,4 @@
-import { Clock, Eye, Share2, Facebook, Twitter, Link as LinkIcon } from 'lucide-react';
+import { Clock, Eye, Share2, Link as LinkIcon } from 'lucide-react';
 
 export default function ArticleDetail() {
   const article = {
@@ -80,14 +80,14 @@ export default function ArticleDetail() {
 
           <div className="flex items-center space-x-3 mb-8 pb-8 border-b border-slate-200">
             <span className="text-sm font-medium text-slate-700">Chia sẻ:</span>
-            <button className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
+            {/* <button className="flex items-center px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors">
               <Facebook size={18} className="mr-2" />
               Facebook
             </button>
             <button className="flex items-center px-3 py-2 bg-sky-50 text-sky-600 rounded-lg hover:bg-sky-100 transition-colors">
               <Twitter size={18} className="mr-2" />
               Twitter
-            </button>
+            </button> */}
             <button className="flex items-center px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors">
               <LinkIcon size={18} className="mr-2" />
               Copy
