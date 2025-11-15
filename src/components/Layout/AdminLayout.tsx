@@ -1,4 +1,5 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
+// --- THÊM 'useNavigate' VÀO IMPORT ---
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, FolderOpen, Globe, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { ToastContainer } from 'react-toastify';
@@ -6,6 +7,9 @@ import { ToastContainer } from 'react-toastify';
 export default function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // --- THÊM MỚI BƯỚC 1: Khởi tạo hook navigate ---
+  const navigate = useNavigate();
 
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -14,6 +18,16 @@ export default function AdminLayout() {
     { path: '/admin/categories', icon: FolderOpen, label: 'Danh Mục' },
     { path: '/admin/settings', icon: Settings, label: 'Cấu Hình' },
   ];
+
+  // --- THÊM MỚI BƯỚC 2: Tạo hàm xử lý đăng xuất ---
+  const handleLogout = () => {
+    // Trong thực tế, em sẽ xóa token/session đã lưu ở đây
+    // Ví dụ: localStorage.removeItem('authToken');
+    
+    // Sau đó chuyển hướng về trang login
+    console.log("Đã đăng xuất, đang chuyển về /login");
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -33,10 +47,16 @@ export default function AdminLayout() {
               </div>
             </div>
             <div className="flex items-center">
-              <button className="flex items-center text-slate-600 hover:text-slate-900">
+              
+              {/* --- THÊM MỚI BƯỚC 3: Thêm onClick và đổi màu hover --- */}
+              <button 
+                onClick={handleLogout} 
+                className="flex items-center text-slate-600 hover:text-red-600"
+              >
                 <LogOut size={20} className="mr-2" />
                 <span className="hidden sm:inline">Đăng xuất</span>
               </button>
+
             </div>
           </div>
         </div>
@@ -56,7 +76,8 @@ export default function AdminLayout() {
                   className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                     isActive
                       ? 'bg-emerald-50 text-emerald-700'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      // Sửa lỗi hover:bg-slate-100'
+                      : 'text-slate-700 hover:bg-slate-100' 
                   }`}
                 >
                   <Icon size={20} className="mr-3" />

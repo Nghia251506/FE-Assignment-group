@@ -21,6 +21,7 @@ import type { Source, Category } from "../../types/models";
 import  crawlerService  from "../../services/crawlerService";
 import { toast } from "react-toastify";
 
+// --- CẬP NHẬT STATE TYPE ---
 type SourceFormState = {
   name: string;
   baseUrl: string;
@@ -30,6 +31,8 @@ type SourceFormState = {
   categoryId: number | "";
   isActive: boolean;
   note: string;
+  thumbnailSelector: string; // <-- THÊM MỚI
+  authorSelector: string;    // <-- THÊM MỚI
 };
 
 const DEFAULT_TENANT_ID = 1; // tạm thời cố định, anh có thể chỉnh sau
@@ -49,6 +52,8 @@ export default function Sources() {
     null
   );
   const [isCrawling, setIsCrawling] = useState(false);
+  
+  // --- CẬP NHẬT STATE BAN ĐẦU ---
   const [formState, setFormState] = useState<SourceFormState>({
     name: "",
     baseUrl: "",
@@ -58,6 +63,8 @@ export default function Sources() {
     categoryId: "",
     isActive: true,
     note: "",
+    thumbnailSelector: "", // <-- THÊM MỚI
+    authorSelector: "",    // <-- THÊM MỚI
   });
   const [runningSourceId, setRunningSourceId] = useState<number | null>(null);
 
@@ -68,17 +75,18 @@ export default function Sources() {
   }, [dispatch]);
 
   const filteredSources = useMemo(() => {
-  const list = Array.isArray(sources) ? sources : [];
-  const q = searchQuery.trim().toLowerCase();
-  if (!q) return list;
+    const list = Array.isArray(sources) ? sources : [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return list;
 
-  return list.filter((s) => {
-    const name = s.name?.toLowerCase() || "";
-    const baseUrl = s.baseUrl?.toLowerCase() || "";
-    return name.includes(q) || baseUrl.includes(q);
-  });
-}, [sources, searchQuery]);
-const handleRunCrawlerAll = async () => {
+    return list.filter((s) => {
+      const name = s.name?.toLowerCase() || "";
+      const baseUrl = s.baseUrl?.toLowerCase() || "";
+      return name.includes(q) || baseUrl.includes(q);
+    });
+  }, [sources, searchQuery]);
+  
+  const handleRunCrawlerAll = async () => {
     if (isCrawling) return;
     const ok = window.confirm(
       "Chạy crawler lấy link cho TẤT CẢ nguồn đang active?\nViệc này có thể tốn vài giây."
@@ -96,6 +104,7 @@ const handleRunCrawlerAll = async () => {
       setIsCrawling(false);
     }
   };
+  
   const handleRunContentBySource = async (source: Source) => {
     if (!source.id) return;
     if (
@@ -123,6 +132,7 @@ const handleRunCrawlerAll = async () => {
     }
   };
 
+  // --- CẬP NHẬT STATE KHI THÊM MỚI ---
   const handleAddClick = () => {
     setEditingSource(null);
     setFormState({
@@ -134,10 +144,13 @@ const handleRunCrawlerAll = async () => {
       categoryId: "",
       isActive: true,
       note: "",
+      thumbnailSelector: "", // <-- THÊM MỚI
+      authorSelector: "",    // <-- THÊM MỚI
     });
     setIsModalOpen(true);
   };
 
+  // --- CẬP NHẬT STATE KHI SỬA ---
   const handleEditClick = (src: Source) => {
     setEditingSource(src);
     setFormState({
@@ -149,6 +162,8 @@ const handleRunCrawlerAll = async () => {
       categoryId: src.categoryId ?? "",
       isActive: src.isActive ?? true,
       note: src.note || "",
+      thumbnailSelector: (src as any).thumbnailSelector || "", // <-- THÊM MỚI
+      authorSelector: (src as any).authorSelector || "",    // <-- THÊM MỚI
     });
     setIsModalOpen(true);
   };
@@ -168,9 +183,11 @@ const handleRunCrawlerAll = async () => {
     }
   };
 
+  // --- CẬP NHẬT LOGIC SUBMIT ---
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    // (Validation giữ nguyên...)
     if (!formState.name.trim()) {
       toast.error("Tên nguồn không được để trống");
       return;
@@ -194,6 +211,7 @@ const handleRunCrawlerAll = async () => {
 
     try {
       if (editingSource && editingSource.id) {
+        // Logic UPDATE
         await dispatch(
           updateSource({
             id: editingSource.id,
@@ -206,11 +224,15 @@ const handleRunCrawlerAll = async () => {
               categoryId: Number(formState.categoryId),
               isActive: formState.isActive,
               note: formState.note.trim() || undefined,
+              // --- THÊM DỮ LIỆU MỚI KHI UPDATE ---
+              thumbnailSelector: formState.thumbnailSelector.trim() || undefined,
+              authorSelector: formState.authorSelector.trim() || undefined,
             },
           }) as any
         );
         toast.success("Cập nhật nguồn thành công");
       } else {
+        // Logic CREATE
         await dispatch(
           createSource({
             tenantId: DEFAULT_TENANT_ID,
@@ -222,6 +244,9 @@ const handleRunCrawlerAll = async () => {
             categoryId: Number(formState.categoryId),
             isActive: formState.isActive,
             note: formState.note.trim() || undefined,
+            // --- THÊM DỮ LIỆU MỚI KHI CREATE ---
+            thumbnailSelector: formState.thumbnailSelector.trim() || undefined,
+            authorSelector: formState.authorSelector.trim() || undefined,
           }) as any
         );
         toast.success("Tạo mới nguồn thành công");
@@ -237,7 +262,7 @@ const handleRunCrawlerAll = async () => {
 
   return (
     <div>
-      {/* Header (giữ nguyên UI) */}
+      {/* Header (giữ nguyên) */}
       <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">
@@ -265,9 +290,9 @@ const handleRunCrawlerAll = async () => {
           </button>
       </div>
       
-
+      {/* Search/Table (giữ nguyên) */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-        {/* Search (giữ UI) */}
+        {/* Search */}
         <div className="p-4 border-b border-slate-200">
           <div className="relative">
             <input
@@ -281,6 +306,7 @@ const handleRunCrawlerAll = async () => {
           </div>
         </div>
 
+        {/* Table... (Giữ nguyên không đổi) */}
         {loading ? (
           <div className="p-6 text-center text-slate-500">
             Đang tải...
@@ -417,9 +443,9 @@ const handleRunCrawlerAll = async () => {
         )}
       </div>
 
-      {/* Modal thêm/sửa source (UI thêm, không ảnh hưởng layout bảng) */}
+      {/* --- CẬP NHẬT MODAL FORM --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 overflow-y-auto py-10">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">
@@ -441,6 +467,7 @@ const handleRunCrawlerAll = async () => {
               className="px-6 py-4 space-y-4"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tên nguồn */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Tên nguồn *
@@ -459,6 +486,7 @@ const handleRunCrawlerAll = async () => {
                   />
                 </div>
 
+                {/* Danh mục */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Danh mục *
@@ -484,6 +512,7 @@ const handleRunCrawlerAll = async () => {
                   </select>
                 </div>
 
+                {/* Base URL */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Base URL *
@@ -502,6 +531,7 @@ const handleRunCrawlerAll = async () => {
                   />
                 </div>
 
+                {/* List URL */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     List URL *
@@ -520,6 +550,7 @@ const handleRunCrawlerAll = async () => {
                   />
                 </div>
 
+                {/* List item selector */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     List item selector *
@@ -538,6 +569,7 @@ const handleRunCrawlerAll = async () => {
                   />
                 </div>
 
+                {/* Link attr */}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Link attr
@@ -555,8 +587,48 @@ const handleRunCrawlerAll = async () => {
                     placeholder="href (mặc định)"
                   />
                 </div>
+
+                {/* --- TRƯỜNG MỚI: THUMBNAIL SELECTOR --- */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Thumbnail Selector
+                  </label>
+                  <input
+                    type="text"
+                    value={formState.thumbnailSelector}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        thumbnailSelector: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="meta[property='og:image']"
+                  />
+                </div>
+                
+                {/* --- TRƯỜNG MỚI: AUTHOR SELECTOR --- */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Author Selector
+                  </label>
+                  <input
+                    type="text"
+                    value={formState.authorSelector}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        authorSelector: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder=".author_name, meta[name='author']"
+                  />
+                </div>
+
               </div>
 
+              {/* Ghi chú */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Ghi chú
@@ -575,6 +647,7 @@ const handleRunCrawlerAll = async () => {
                 />
               </div>
 
+              {/* Checkbox Active */}
               <div className="flex items-center gap-2">
                 <input
                   id="srcActive"
@@ -596,6 +669,7 @@ const handleRunCrawlerAll = async () => {
                 </label>
               </div>
 
+              {/* Buttons */}
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 mt-2">
                 <button
                   type="button"

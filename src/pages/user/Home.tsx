@@ -7,6 +7,7 @@ import type { RootState } from "../../redux/store";
 import { fetchPosts } from "../../redux/slices/postSlice";
 import type { Post } from "../../types/models";
 
+// (Các kiểu dữ liệu và hằng số của em giữ nguyên)
 type UiArticle = {
   id: number;
   slug: string;
@@ -26,29 +27,24 @@ const categoryColors: { [key: string]: string } = {
   "Thế Giới": "bg-red-100 text-red-800",
 };
 
-// default màu cho category lạ
 const defaultCategoryClass = "bg-slate-100 text-slate-800";
 
-const INITIAL_VISIBLE = 3; // số bài "tin mới" mặc định
-const MAX_VISIBLE = 10; // khi xem thêm, tối đa bao nhiêu bài muốn show
+const INITIAL_VISIBLE = 3;
+const MAX_VISIBLE = 10;
 
+// (Hàm formatTimeAgo giữ nguyên)
 function formatTimeAgo(dateString?: string | null): string {
   if (!dateString) return "";
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "";
-
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.floor(diffMs / 60000);
-
   if (diffMinutes < 1) return "Vừa xong";
   if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours} giờ trước`;
-
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 30) return `${diffDays} ngày trước`;
-
   const diffMonths = Math.floor(diffDays / 30);
   return `${diffMonths} tháng trước`;
 }
@@ -58,37 +54,62 @@ export default function Home() {
   const { items: posts, loading } = useAppSelector(
     (state: RootState) => state.post
   );
+  
+  // --- THÊM MỚI 1: LẤY SEARCH QUERY TỪ REDUX ---
+  const searchQuery = useAppSelector((state: RootState) => state.ui.searchQuery);
 
   const [expanded, setExpanded] = useState(false);
 
   // 🟢 Lần đầu load: lấy bài viết từ BE
   useEffect(() => {
+    // --- THAY ĐỔI 2: PHẢI LẤY NHIỀU BÀI ĐỂ SEARCH ---
+    // Cách 1 (Client-side search) yêu cầu tải hết bài về.
+    // Anh tạm set size: 999 để đảm bảo lọc được
     dispatch(
       fetchPosts({
         page: 0,
-        size: 20, // đủ để có 1 bài nổi bật + nhiều bài "Tin mới nhất"
+        size: 999, // Phải lấy nhiều bài (hoặc tất cả)
       }) as any
     );
   }, [dispatch]);
 
-  // 🟢 Lọc các bài đã published và sort mới nhất trước
+  // --- THAY ĐỔI 3: LỌC BÀI VIẾT BẰNG CẢ SEARCH QUERY ---
   const publishedPosts: Post[] = useMemo(() => {
     const list = Array.isArray(posts) ? posts : [];
-    return [...list]
-      .filter((p) => p.status === "published")
+    const q = searchQuery.trim().toLowerCase();
+
+    // 1. Lọc theo status
+    const filteredByStatus = list.filter((p) => p.status === "published");
+
+    // 2. Lọc thêm bằng search query (nếu có)
+    const filteredBySearch = q
+      ? filteredByStatus.filter((p) => {
+          const title = p.title?.toLowerCase() || "";
+          // Em có thể thêm các trường khác, ví dụ:
+          // const summary = p.summary?.toLowerCase() || "";
+          // return title.includes(q) || summary.includes(q);
+          return title.includes(q);
+        })
+      : filteredByStatus; // Nếu không search, giữ nguyên
+      
+    // 3. Sort (giữ nguyên)
+    return [...filteredBySearch]
       .sort((a, b) => {
         const aDate = new Date(a.publishedAt || a.createdAt || "").getTime();
         const bDate = new Date(b.publishedAt || b.createdAt || "").getTime();
         return bDate - aDate;
       });
-  }, [posts]);
+  }, [posts, searchQuery]); // <-- Thêm searchQuery làm dependency
+
+  // (Tất cả các useMemo và logic bên dưới của em đều giữ nguyên
+  // vì chúng đọc từ 'publishedPosts' đã được lọc)
 
   const featuredArticle: UiArticle | null = useMemo(() => {
     if (!publishedPosts.length) return null;
     const p = publishedPosts[0];
     return {
       id: p.id!,
-      slug: p.slug || String(p.id), // fallback id nếu chưa có slug
+      slug: p.slug || String(p.id),
       title: p.title || "Không có tiêu đề",
       excerpt:
         p.summary ||
@@ -101,7 +122,6 @@ export default function Home() {
     };
   }, [publishedPosts]);
 
-  // 🟢 Tất cả bài "Tin mới nhất" sau bài nổi bật (bắt đầu từ index 1)
   const allNewestArticles: UiArticle[] = useMemo(() => {
     if (publishedPosts.length <= 1) return [];
     return publishedPosts.slice(1).map((p) => ({
@@ -119,7 +139,6 @@ export default function Home() {
     }));
   }, [publishedPosts]);
 
-  // 🟢 Các bài đang hiển thị (3 mặc định, tối đa 10 khi "xem thêm")
   const visibleArticles: UiArticle[] = useMemo(() => {
     const max = expanded ? MAX_VISIBLE : INITIAL_VISIBLE;
     return allNewestArticles.slice(0, max);
@@ -133,75 +152,90 @@ export default function Home() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* ==== BÀI NỔI BẬT ==== */}
-      <div className="mb-8">
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Ảnh bên trái: dùng thumbnail nếu có, không thì block xám như cũ */}
-            <div className="h-64 md:h-full bg-slate-200">
-              {featuredArticle?.thumbnail && (
-                <img
-                  src={featuredArticle.thumbnail}
-                  alt={featuredArticle.title}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-
-            <div className="p-6 flex flex-col justify-center">
-              {loading && !featuredArticle ? (
-                <>
-                  <div className="h-5 w-24 bg-slate-100 rounded mb-3" />
-                  <div className="h-6 w-3/4 bg-slate-100 rounded mb-2" />
-                  <div className="h-6 w-2/3 bg-slate-100 rounded mb-4" />
-                  <div className="h-4 w-1/2 bg-slate-100 rounded mb-2" />
-                </>
-              ) : featuredArticle ? (
-                <>
-                  <span
-                    className={`inline-block px-3 py-1 rounded text-xs font-medium mb-3 self-start ${
-                      categoryColors[featuredArticle.category] ||
-                      defaultCategoryClass
-                    }`}
+      {/* ==== BÀI NỔI BẬT (HOẶC KẾT QUẢ SỐ 1) ==== */}
+      {/* --- THAY ĐỔI 4: ẨN KHI ĐANG LOADING HOẶC SEARCH KHÔNG RA --- */}
+      {(!loading && featuredArticle) && (
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="h-64 md:h-full bg-slate-200">
+                {featuredArticle?.thumbnail && (
+                  <img
+                    src={featuredArticle.thumbnail}
+                    alt={featuredArticle.title}
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+              <div className="p-6 flex flex-col justify-center">
+                <span
+                  className={`inline-block px-3 py-1 rounded text-xs font-medium mb-3 self-start ${
+                    categoryColors[featuredArticle.category] ||
+                    defaultCategoryClass
+                  }`}
+                >
+                  {featuredArticle.category}
+                </span>
+                <h2 className="text-2xl font-bold text-slate-900 mb-3 line-clamp-3">
+                  <Link
+                    to={`/article/${featuredArticle.slug || featuredArticle.id}`}
+                    className="hover:text-emerald-600 transition-colors"
                   >
-                    {featuredArticle.category}
-                  </span>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-3 line-clamp-3">
-                    <Link
-                      to={`/article/${featuredArticle.slug || featuredArticle.id}`}
-                      className="hover:text-emerald-600 transition-colors"
-                    >
-                      {featuredArticle.title}
-                    </Link>
-                  </h2>
-                  <p className="text-slate-600 mb-4 line-clamp-3">
-                    {featuredArticle.excerpt}
-                  </p>
-                  <div className="flex items-center text-sm text-slate-500 space-x-4">
-                    <div className="flex items-center">
-                      <Clock size={16} className="mr-1" />
-                      {featuredArticle.timeAgo}
-                    </div>
-                    <div className="flex items-center">
-                      <Eye size={16} className="mr-1" />
-                      {featuredArticle.views}
-                    </div>
+                    {featuredArticle.title}
+                  </Link>
+                </h2>
+                <p className="text-slate-600 mb-4 line-clamp-3">
+                  {featuredArticle.excerpt}
+                </p>
+                <div className="flex items-center text-sm text-slate-500 space-x-4">
+                  <div className="flex items-center">
+                    <Clock size={16} className="mr-1" />
+                    {featuredArticle.timeAgo}
                   </div>
-                </>
-              ) : (
-                <p className="text-slate-500">Chưa có bài viết nổi bật.</p>
-              )}
+                  <div className="flex items-center">
+                    <Eye size={16} className="mr-1" />
+                    {featuredArticle.views}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+      
+      {/* Skeleton loading cho bài nổi bật (chỉ khi load lần đầu) */}
+      {(loading && !featuredArticle) && (
+        <div className="mb-8">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="h-64 md:h-full bg-slate-200" />
+              <div className="p-6">
+                <div className="h-5 w-24 bg-slate-100 rounded mb-3" />
+                <div className="h-6 w-3/4 bg-slate-100 rounded mb-2" />
+                <div className="h-6 w-2/3 bg-slate-100 rounded mb-4" />
+                <div className="h-4 w-1/2 bg-slate-100 rounded mb-2" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* ==== TIN MỚI NHẤT ==== */}
+
+      {/* ==== TIN MỚI NHẤT (HOẶC KẾT QUẢ CÒN LẠI) ==== */}
       <div>
+        {/* --- THAY ĐỔI 5: ĐỔI TIÊU ĐỀ KHI SEARCH --- */}
         <h2 className="text-2xl font-bold text-slate-900 mb-6">
-          Tin Mới Nhất
+          {searchQuery ? `Kết quả cho "${searchQuery}"` : "Tin Mới Nhất"}
         </h2>
+        
+        {/* (Tạm ẩn bài nổi bật nếu đang search mà không có kết quả) */}
+        {searchQuery && !featuredArticle && !visibleArticles.length && (
+          <p className="text-slate-500">
+            Không tìm thấy bài viết nào cho từ khóa "{searchQuery}".
+          </p>
+        )}
 
+        {/* Skeleton loading (chỉ khi load lần đầu) */}
         {loading && !visibleArticles.length ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 3 }).map((_, idx) => (
@@ -219,8 +253,13 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : !visibleArticles.length ? (
-          <p className="text-slate-500">Chưa có bài viết mới.</p>
+        // --- THAY ĐỔI 6: SỬA LẠI THÔNG BÁO "KHÔNG CÓ BÀI" ---
+        ) : !visibleArticles.length && !featuredArticle ? (
+          <p className="text-slate-500">
+            {searchQuery
+              ? `Không tìm thấy bài viết nào.`
+              : "Chưa có bài viết mới."}
+          </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {visibleArticles.map((article) => (
