@@ -47,6 +47,7 @@ export interface User {
 // --- CATEGORY ---
 
 export interface Category {
+  slug: number;
   id: number;
   tenant?: Tenant | null;
   code: string;
@@ -91,6 +92,7 @@ export type PostStatus = "pending" | "draft" | "published" | "removed";
 export type DeleteStatus = "Active" | "Deleted";
 
 export interface Post {
+  categoryId: number;
   id: number;
   tenant?: Tenant | null;
   source?: Source | null;

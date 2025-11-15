@@ -33,6 +33,19 @@ export const fetchPosts = createAsyncThunk<
   }
 });
 
+export const generatePost = createAsyncThunk<Post, number>(
+  "post/generatePost",
+  async (id, { rejectWithValue }) => {
+    try {
+      const data = await postService.generatePost(id);
+      return data;
+    } catch (err: any) {
+      console.error("generatePost error", err);
+      return rejectWithValue(err.response?.data || "Generate post failed");
+    }
+  }
+);
+
 export const updatePost = createAsyncThunk<
   Post,
   { id: number; data: Partial<Post> }
@@ -91,6 +104,27 @@ const postSlice = createSlice({
       .addCase(fetchPosts.rejected, (state, action: any) => {
         state.loading = false;
         state.error = action.payload || "Fetch posts failed";
+      });
+      builder
+    .addCase(generatePost.pending, (state) => {
+        // tuỳ anh có muốn show loading chung hay không
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(generatePost.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const idx = state.items.findIndex((p) => p.id === updated.id);
+        if (idx !== -1) {
+          state.items[idx] = updated;
+        } else {
+          // phòng trường hợp list chưa có bài này
+          state.items.unshift(updated);
+        }
+      })
+      .addCase(generatePost.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || "Generate post failed";
       });
 
     // update

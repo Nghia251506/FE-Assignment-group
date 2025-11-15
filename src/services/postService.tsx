@@ -22,6 +22,10 @@ const postService = {
     // ⚠️ Trả về res.data để tránh lưu AxiosResponse (headers...) vào Redux
     return res.data;
   },
+  async generatePost(id: number): Promise<Post> {
+    const res = await axiosClient.post<Post>(`/admin/${id}/generate`);
+    return res.data;
+  },
 
   // mấy hàm này để sau Articles dùng thêm
   getById(id: number) {
