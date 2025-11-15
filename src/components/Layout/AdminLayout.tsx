@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, FolderOpen, Globe, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import { ToastContainer } from 'react-toastify';
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -70,6 +71,7 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
