@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Layouts
 import AdminLayout from './components/Layout/AdminLayout';
-import UserLayout from './components/Layout/UserLayout';
 
 // Admin Pages
 import Dashboard from './pages/admin/Dashboard';
@@ -11,10 +10,7 @@ import Articles from './pages/admin/Articles';
 import Categories from './pages/admin/Categories';
 import Settings from './pages/admin/Settings';
 
-// User Pages
-import Home from './pages/user/Home';
-import ArticleDetail from './pages/user/ArticleDetail';
-import Category from './pages/user/Category';
+
 
 // --- THÊM IMPORT MỚI ---
 import LoginPage from './pages/LoginPage';
@@ -25,12 +21,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* === Các Route cho Người dùng (Public) === */}
-        <Route path="/" element={<UserLayout />}>
-          <Route index element={<Home />} />
-          <Route path="article/:idOrSlug" element={<ArticleDetail />} />
-          <Route path="category/:id" element={<Category />} />
-        </Route>
 
         {/* === Các Route cho Xác thực (Auth) === */}
         {/* Đây là 2 route mới, nằm độc lập */}

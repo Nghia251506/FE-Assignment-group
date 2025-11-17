@@ -231,7 +231,7 @@ export default function Categories() {
                     <p className="text-sm text-slate-600">
                       Slug:{" "}
                       <code className="text-xs bg-slate-100 px-2 py-1 rounded">
-                        {slug || "-"}
+                        {category.slug || "-"}
                       </code>
                     </p>
                     <p className="text-sm text-slate-600">
