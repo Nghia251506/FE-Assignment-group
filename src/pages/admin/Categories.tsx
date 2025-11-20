@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
   fetchCategories,
+  fetchArticleCountBySlug,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -44,7 +45,7 @@ function slugify(text: string | undefined | null): string {
 
 export default function Categories() {
   const dispatch = useAppDispatch();
-  const { items: categories, loading } = useAppSelector(
+  const { items: categories, loading, articleCount } = useAppSelector(
     (state: RootState) => state.category
   );
 
@@ -62,6 +63,13 @@ export default function Categories() {
   useEffect(() => {
     dispatch(fetchCategories() as any); // tenant mặc định trong slice/api
   }, [dispatch]);
+
+  // Gọi API lấy số bài viết theo slug mỗi khi categories thay đổi
+  useEffect(() => {
+    categories.forEach((category) => {
+      dispatch(fetchArticleCountBySlug(category.slug)); // Gọi API đếm bài viết
+    });
+  }, [categories, dispatch]);
 
   // Filter client theo searchQuery (name/code)
   const filteredCategories = useMemo(() => {
@@ -197,7 +205,7 @@ export default function Categories() {
                 colorList[index % colorList.length] || colorList[0];
               const slug = slugify(category.name);
               const articlesCount =
-                (category as any).articleCount ?? 0; // BE có thể trả field articleCount
+                articleCount[category.slug] ?? 0; // Lấy số bài viết từ Redux
 
               return (
                 <div

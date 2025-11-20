@@ -23,7 +23,7 @@ const postService = {
     return res.data;
   },
   async generatePost(id: number): Promise<Post> {
-    const res = await axiosClient.post<Post>(`/admin/${id}/generate`);
+    const res = await axiosClient.post<Post>(`/admin/posts/${id}/generate`);
     return res.data;
   },
 

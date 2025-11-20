@@ -34,18 +34,18 @@ export interface SourceUpdatePayload {
 
 export const sourceService = {
   // GET /api/admin/sources/tenant/{tenantId}
-  getByTenant(tenantId: number): Promise<Source[]> {
+  getSources(): Promise<Source[]> {
     const data = axiosClient
-      .get<Source[]>(`/admin/sources/tenant/${tenantId}`)
+      .get<Source[]>(`/admin/sources`)
       .then((res) => res.data);
       console.log("Data BE: ", data)
       return data;
   },
 
   // GET /api/admin/sources/tenant/{tenantId}/active
-  getActiveByTenant(tenantId: number): Promise<Source[]> {
+  getSourceActive(): Promise<Source[]> {
     return axiosClient
-      .get<Source[]>(`/admin/sources/tenant/${tenantId}/active`)
+      .get<Source[]>(`/admin/sources/active`)
       .then((res) => res.data);
   },
 

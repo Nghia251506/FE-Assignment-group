@@ -29,8 +29,8 @@ function App() {
 
 
         {/* === Các Route cho Admin (Protected) === */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="sources" element={<Sources />} />
           <Route path="articles" element={<Articles />} />

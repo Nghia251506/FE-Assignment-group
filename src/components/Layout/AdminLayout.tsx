@@ -12,11 +12,11 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/sources', icon: Globe, label: 'Nguồn Trang' },
-    { path: '/admin/articles', icon: FileText, label: 'Bài Viết' },
-    { path: '/admin/categories', icon: FolderOpen, label: 'Danh Mục' },
-    { path: '/admin/settings', icon: Settings, label: 'Cấu Hình' },
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/sources', icon: Globe, label: 'Nguồn Trang' },
+    { path: '/articles', icon: FileText, label: 'Bài Viết' },
+    { path: '/categories', icon: FolderOpen, label: 'Danh Mục' },
+    { path: '/settings', icon: Settings, label: 'Cấu Hình' },
   ];
 
   // --- THÊM MỚI BƯỚC 2: Tạo hàm xử lý đăng xuất ---

@@ -27,13 +27,9 @@ export const fetchSources = createAsyncThunk<
   Source[],
   number | undefined,
   { state: RootState }
->("source/fetchByTenant", async (tenantIdArg, { getState, rejectWithValue }) => {
+>("sources", async (tenantIdArg, { getState, rejectWithValue }) => {
   try {
-    const state = getState();
-    const tenantId =
-      tenantIdArg ?? state.source.defaultTenantId ?? 1; // fallback 1
-
-    const data = await sourceService.getByTenant(tenantId);
+    const data = await sourceService.getSources();
     return data;
   } catch (err: any) {
     return rejectWithValue(

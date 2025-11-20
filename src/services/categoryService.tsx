@@ -13,27 +13,24 @@ export type CategoryPayload = {
 };
 
 export const categoryApi = {
-  // GET /api/admin/categories/tenant/{tenantId}
-  getByTenant(tenantId: number = DEFAULT_TENANT_ID) {
-    return axiosClient.get<Category[]>(
-      `/admin/categories/tenant/${tenantId}`
-    );
+  // GET /api/admin/categories
+  getCategories() {
+    return axiosClient.get<Category[]>("/admin/categories");
   },
 
-  // GET /admin/categories/tenant/{tenantId}/active
-  getActiveByTenant(tenantId: number = DEFAULT_TENANT_ID) {
-    return axiosClient.get<Category[]>(
-      `/admin/categories/tenant/${tenantId}/active`
-    );
+  getArticleCountBySlug(slug: string) {
+    return axiosClient.get<number>(`/admin/categories/${slug}/posts-count`);
+  },
+
+  // GET /admin/categories/active
+  getCategoriesActive() {
+    return axiosClient.get<Category[]>("/admin/categories/active");
   },
 
   // POST /admin/categories
   create(data: CategoryPayload) {
-    const tenantId = data.tenantId ?? DEFAULT_TENANT_ID;
-    return axiosClient.post<Category>(`/admin/categories`, {
-      ...data,
-      tenantId,
-    });
+    // Không cần truyền tenantId nữa, nếu có vẫn có thể giữ logic mặc định
+    return axiosClient.post<Category>("/admin/categories", data);
   },
 
   // PUT /admin/categories/{id}
@@ -49,5 +46,10 @@ export const categoryApi = {
   // GET /admin/categories/{id}
   getById(id: number) {
     return axiosClient.get<Category>(`/admin/categories/${id}`);
+  },
+
+  // GET /admin/categories/{slug}
+  getCategoryBySlug(slug: string) {
+    return axiosClient.get<Category>(`/admin/categories/${slug}`);
   },
 };

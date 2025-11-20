@@ -1,4 +1,3 @@
-// src/redux/slices/categorySlice.ts
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { categoryApi, CategoryPayload } from "../../services/categoryService";
 import type { Category } from "../../types/models";
@@ -7,24 +6,39 @@ type CategoryState = {
   items: Category[];
   loading: boolean;
   error: string | null;
+  articleCount: Record<string, number>; // Thêm một trường để lưu số bài viết theo slug
 };
 
 const initialState: CategoryState = {
   items: [],
   loading: false,
   error: null,
+  articleCount: {}, // Khởi tạo giá trị ban đầu cho articleCount
 };
 
 // GET /api/admin/categories/tenant/{tenantId}
 export const fetchCategories = createAsyncThunk<
   Category[],
-  number | undefined
->("category/fetchCategories", async (tenantId, { rejectWithValue }) => {
+  void // Không còn cần tham số tenantId
+>("category/fetchCategories", async (_, { rejectWithValue }) => {
   try {
-    const res = await categoryApi.getByTenant(tenantId);
+    const res = await categoryApi.getCategories(); // API sẽ không cần tenantId nữa
     return res.data;
   } catch (err: any) {
     return rejectWithValue(err.message || "Fetch categories failed");
+  }
+});
+
+// GET /api/public/categories/{slug}/posts-count
+export const fetchArticleCountBySlug = createAsyncThunk<
+  number,
+  string // Lấy slug để tính số bài viết
+>("category/fetchArticleCountBySlug", async (slug, { rejectWithValue }) => {
+  try {
+    const res = await categoryApi.getArticleCountBySlug(slug); // Lấy số bài viết
+    return res.data;
+  } catch (err: any) {
+    return rejectWithValue(err.message || "Fetch article count failed");
   }
 });
 
@@ -101,6 +115,12 @@ const categorySlice = createSlice({
     // delete
     builder.addCase(deleteCategory.fulfilled, (state, action) => {
       state.items = state.items.filter((c) => c.id !== action.payload);
+    });
+
+    // fetch article count by slug
+    builder.addCase(fetchArticleCountBySlug.fulfilled, (state, action) => {
+      const slug = action.meta.arg; // Get the slug from the meta data
+      state.articleCount[slug] = action.payload; // Save the count to the articleCount object
     });
   },
 });

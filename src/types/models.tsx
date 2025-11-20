@@ -47,9 +47,8 @@ export interface User {
 // --- CATEGORY ---
 
 export interface Category {
-  slug: number;
+  slug: string;
   id: number;
-  tenant?: Tenant | null;
   code: string;
   name: string;
   description?: string;
