@@ -1,10 +1,15 @@
 import {
   Search,
-  Filter,
   Edit2,
   Trash2,
   CheckCircle,
   Sparkles,
+  MoreVertical,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  X,
+  Save,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
@@ -13,325 +18,469 @@ import {
   fetchPosts,
   publishPost,
   deletePost,
-  generatePost
+  generatePost,
+  createPost,
+  updatePost,
 } from "../../redux/slices/postSlice";
+import { fetchCategories } from "../../redux/slices/categorySlice";
 import type { Post } from "../../types/models";
 import { toast } from "react-toastify";
 
 function getStatusLabel(status?: string) {
   switch (status) {
-    case "published":
-      return "Đã duyệt";
-    case "pending":
-      return "Chờ duyệt";
-    case "draft":
-      return "Bản nháp";
-    case "removed":
-      return "Đã xoá";
-    default:
-      return "Không rõ";
+    case "published": return "Đã duyệt";
+    case "pending": return "Chờ duyệt";
+    case "draft": return "Bản nháp";
+    case "removed": return "Đã xoá";
+    default: return "Không rõ";
   }
 }
 
 function getStatusClasses(status?: string) {
   switch (status) {
-    case "published":
-      return "bg-emerald-100 text-emerald-800";
-    case "pending":
-      return "bg-yellow-100 text-yellow-800";
-    case "draft":
-      return "bg-slate-100 text-slate-700";
-    case "removed":
-      return "bg-red-100 text-red-700";
-    default:
-      return "bg-slate-100 text-slate-700";
+    case "published": return "bg-emerald-100 text-emerald-800";
+    case "pending": return "bg-yellow-100 text-yellow-800";
+    case "draft": return "bg-slate-100 text-slate-700";
+    case "removed": return "bg-red-100 text-red-700";
+    default: return "bg-slate-100 text-slate-700";
   }
 }
 
-const PAGE_SIZE = 5; // ✅ số bài / trang, anh muốn đổi thì sửa số này
+const PAGE_SIZE = 10;
 
 export default function Articles() {
   const dispatch = useAppDispatch();
-  const { items: posts, loading } = useAppSelector(
-    (state: RootState) => state.post
-  );
+  const { items: posts, loading } = useAppSelector((state: RootState) => state.post);
+  const { items: categories } = useAppSelector((state: RootState) => state.category);
+  const { items: tags } = useAppSelector((state: RootState) => state.tag);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | string>("all");
-
-  // ✅ state phân trang
   const [currentPage, setCurrentPage] = useState(1);
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
 
-  // load posts lần đầu
+  // Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<Post | null>(null);
+
+  const [formData, setFormData] = useState({
+    title: "",
+    slug: "",
+    thumbnail: "",
+    categoryId: "",
+    content: "",
+    metaTitle: "",
+    metaDescription: "",
+    status: "draft" as "draft" | "pending" | "published",
+    tagIds: [] as number[],
+  });
+
   useEffect(() => {
-    dispatch(
-      fetchPosts({
-        page: 0,
-        size: 1000,
-      }) as any
-    );
+    dispatch(fetchPosts({ page: 0, size: 1000 }) as any);
+    dispatch(fetchCategories() as any);
   }, [dispatch]);
 
-  // filter client theo search + status
-  const filteredArticles = useMemo(() => {
-    const list = Array.isArray(posts) ? posts : [];
-    const q = searchQuery.trim().toLowerCase();
-
-    return list.filter((p) => {
-      if (filterStatus !== "all" && p.status !== filterStatus) return false;
-      if (!q) return true;
-
-      const title = p.title?.toLowerCase() || "";
-      const categoryName = p.category?.name?.toLowerCase() || "";
-      const sourceName = p.source?.name?.toLowerCase() || "";
-
-      return (
-        title.includes(q) ||
-        categoryName.includes(q) ||
-        sourceName.includes(q)
-      );
-    });
-  }, [posts, searchQuery, filterStatus]);
-
-  // ✅ reset về trang 1 mỗi khi search / filter đổi
+  // Click outside dropdown
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filterStatus]);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element)?.closest?.("button[aria-haspopup]")) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
-  // ✅ cắt bài viết theo trang hiện tại
-  const paginatedArticles = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredArticles.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredArticles, currentPage]);
+  const openModal = (article?: Post) => {
+    if (article) {
+      setEditingArticle(article);
+      setFormData({
+        title: article.title || "",
+        slug: article.slug || "",
+        thumbnail: article.thumbnail || "",
+        categoryId: article.categoryId?.toString() || "",
+        content: article.content || "",
+        metaTitle: article.metaTitle || "",
+        metaDescription: article.metaDescription || "",
+        status: (article.status as any) || "draft",
+        tagIds: [] as number[],
+      });
+    } else {
+      setEditingArticle(null);
+      setFormData({
+        title: "",
+        slug: "",
+        thumbnail: "",
+        categoryId: "",
+        content: "",
+        metaTitle: "",
+        metaDescription: "",
+        status: "draft",
+        tagIds: [] as number[],
+      });
+    }
+    setIsModalOpen(true);
+  };
 
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredArticles.length / PAGE_SIZE)
-  );
+  const handleSave = async () => {
+    if (!formData.title.trim()) return toast.error("Tiêu đề không được để trống");
 
-  // duyệt bài => set status = published
+    const payload: any = {
+      title: formData.title.trim(),
+      slug: formData.slug.trim() || undefined,
+      thumbnail: formData.thumbnail.trim() || undefined,
+      categoryId: formData.categoryId ? Number(formData.categoryId) : undefined,
+      content: formData.content.trim(),
+      metaTitle: formData.metaTitle.trim() || undefined,
+      metaDescription: formData.metaDescription.trim() || undefined,
+      status: formData.status,
+      tagIds: formData.tagIds||[],
+    };
+
+    try {
+      if (editingArticle?.id) {
+        await dispatch(updatePost({ id: editingArticle.id, data: payload }) as any);
+        toast.success("Cập nhật bài viết thành công");
+      } else {
+        await dispatch(createPost(payload) as any);
+        toast.success("Tạo bài viết mới thành công");
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Lưu bài viết thất bại");
+    }
+  };
+
   const handleApprove = async (article: Post) => {
     if (!article.id) return;
     try {
       await dispatch(publishPost(article.id) as any);
-    } catch (err) {
-      console.error(err);
-      alert("Duyệt bài thất bại");
+      toast.success("Duyệt bài thành công");
+    } catch {
+      toast.error("Duyệt bài thất bại");
     }
   };
 
-  // xoá hẳn
-  const handleDelete = async (article: Post) => {
+  const handleGenerate = async (article: Post) => {
     if (!article.id) return;
-    const ok = window.confirm("Xoá bài này khỏi hệ thống?");
-    if (!ok) return;
+    try {
+      await dispatch(generatePost(article.id) as any).unwrap();
+      toast.success("Generate nội dung thành công");
+    } catch {
+      toast.error("Generate thất bại");
+    }
+  };
+
+  const handleDelete = async (article: Post) => {
+    if (!article.id || !window.confirm("Xóa vĩnh viễn bài viết này?")) return;
     try {
       await dispatch(deletePost(article.id) as any);
-    } catch (err) {
-      console.error(err);
-      alert("Xoá bài thất bại");
+      toast.success("Xóa bài thành công");
+    } catch {
+      toast.error("Xóa bài thất bại");
     }
   };
 
-  // generate sau này nối API AI, giờ để tạm alert
-  const handleGenerate = async (article: Post) => {
-  if (!article.id) return;
-  try {
-    await dispatch(generatePost(article.id) as any).unwrap();
-    toast.success("Generate nội dung bài viết thành công");
-  } catch (err) {
-    console.error(err);
-    toast.error("Generate bài viết thất bại");
-  }
-};
+  // Filter & Pagination
+  const filteredArticles = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return (Array.isArray(posts) ? posts : []).filter((p) => {
+      if (filterStatus !== "all" && p.status !== filterStatus) return false;
+      if (!q) return true;
+      const title = p.title?.toLowerCase() || "";
+      const category = p.category?.name?.toLowerCase() || p.categoryName?.toLowerCase() || "";
+      const source = p.baseUrl?.toLowerCase() || "";
+      return title.includes(q) || category.includes(q) || source.includes(q);
+    });
+  }, [posts, searchQuery, filterStatus]);
+
+  useEffect(() => setCurrentPage(1), [searchQuery, filterStatus]);
+
+  const totalItems = filteredArticles.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  const paginatedArticles = filteredArticles.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else if (currentPage <= 4) {
+      for (let i = 1; i <= 5; i++) pages.push(i);
+      pages.push("...");
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.push(1);
+      pages.push("...");
+      for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      pages.push("...");
+      for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+      pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Bài Viết</h1>
-        <p className="text-slate-600 mt-2">
-          Quản lý các bài viết được crawl từ nguồn
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Bài Viết</h1>
+          <p className="text-slate-600 mt-2">Quản lý bài viết (crawl + tự tạo)</p>
+        </div>
+        <button
+          onClick={() => openModal()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+        >
+          <Plus size={20} />
+          Viết bài mới
+        </button>
       </div>
 
-      {/* Bộ lọc trên cùng */}
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200 mb-6">
-        <div className="p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Tìm kiếm bài viết..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <Search className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" />
-            </div>
-            <div className="flex gap-2">
-              <select
-                value={filterStatus}
-                onChange={(e) =>
-                  setFilterStatus(e.target.value as "all" | string)
-                }
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="published">Đã duyệt (published)</option>
-                <option value="pending">Chờ duyệt (pending)</option>
-                <option value="draft">Bản nháp (draft)</option>
-                <option value="removed">Đã xoá (removed)</option>
-              </select>
-              <button className="flex items-center px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">
-                <Filter size={20} className="mr-2" />
-                Lọc
-              </button>
-            </div>
+      {/* Bộ lọc */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-5 w-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Tìm kiếm bài viết..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="published">Đã duyệt</option>
+            <option value="pending">Chờ duyệt</option>
+            <option value="draft">Bản nháp</option>
+            <option value="removed">Đã xoá</option>
+          </select>
         </div>
       </div>
 
-      {/* List bài viết */}
-      {loading ? (
-        <div className="p-6 text-center text-slate-500 bg-white rounded-lg shadow-sm border border-slate-200">
-          Đang tải danh sách bài viết...
-        </div>
-      ) : !filteredArticles.length ? (
-        <div className="p-6 text-center text-slate-500 bg-white rounded-lg shadow-sm border border-slate-200">
-          Không có bài viết nào.
-        </div>
-      ) : (
-        <>
-          {/* ✅ dùng paginatedArticles thay vì filteredArticles */}
-          <div className="grid gap-6">
-            {paginatedArticles.map((article) => (
-              <div
-                key={article.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 md:p-5"
-              >
-                <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-stretch">
-                  {/* Thumbnail bên trái */}
-                  <div className="w-full md:w-56 lg:w-64 flex-shrink-0">
-                    <div className="relative overflow-hidden rounded-xl bg-slate-100 h-40 md:h-32">
-                      {article.thumbnail ? (
-                        <img
-                          src={article.thumbnail}
-                          alt={article.title || "Thumbnail"}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
-                          Không có ảnh
+      {/* BẢNG HOÀN CHỈNH */}
+      <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+        {loading ? (
+          <div className="p-16 text-center text-slate-500">Đang tải bài viết...</div>
+        ) : totalItems === 0 ? (
+          <div className="p-16 text-center text-slate-500">Không có bài viết nào.</div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Bài viết</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Danh mục / Nguồn</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Trạng thái</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Lượt xem</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Ngày tạo</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-slate-700 uppercase tracking-wider">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-200">
+                  {paginatedArticles.map((article) => (
+                    <tr key={article.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">
+                            {article.thumbnail ? (
+                              <img src={article.thumbnail} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">No img</div>
+                            )}
+                          </div>
+                          <div className="max-w-md">
+                            <div className="text-sm font-medium text-slate-900 line-clamp-2">
+                              {article.title || "(Không có tiêu đề)"}
+                            </div>
+                          </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600">
+                        <div>
+                          <div className="font-medium">{article.categoryName || article.category?.name || "Chưa gán"}</div>
+                          <div className="text-xs text-slate-500">{article.baseUrl || "Không rõ nguồn"}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${getStatusClasses(article.status)}`}>
+                          {getStatusLabel(article.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-600 text-center">{article.viewCount ?? 0}</td>
+                      <td className="px-6 py-4 text-sm text-slate-600">{article.createdAt?.slice(0, 10) || "-"}</td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="relative inline-block text-left">
+                          <button
+                            aria-haspopup="true"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(openDropdown === article.id ? null : article.id);
+                            }}
+                            className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                          >
+                            <MoreVertical size={18} className="text-slate-600" />
+                          </button>
+
+                          {openDropdown === article.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                              <div className="py-1">
+                                {article.status !== "published" && (
+                                  <button onClick={() => { handleApprove(article); setOpenDropdown(null); }} className="w-full px-4 py-2 text-left text-sm text-emerald-700 hover:bg-emerald-50 flex items-center gap-2">
+                                    <CheckCircle size={16} /> Duyệt bài
+                                  </button>
+                                )}
+                                <button onClick={() => { handleGenerate(article); setOpenDropdown(null); }} className="w-full px-4 py-2 text-left text-sm text-purple-700 hover:bg-purple-50 flex items-center gap-2">
+                                  <Sparkles size={16} /> Generate nội dung
+                                </button>
+                                <button onClick={() => { openModal(article); setOpenDropdown(null); }} className="w-full px-4 py-2 text-left text-sm text-blue-700 hover:bg-blue-50 flex items-center gap-2">
+                                  <Edit2 size={16} /> Sửa bài viết
+                                </button>
+                                <button onClick={() => { handleDelete(article); setOpenDropdown(null); }} className="w-full px-4 py-2 text-left text-sm text-red-700 hover:bg-red-50 flex items-center gap-2">
+                                  <Trash2 size={16} /> Xóa vĩnh viễn
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Phân trang */}
+            {totalPages > 1 && (
+              <div className="border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-sm text-slate-600">
+                  Hiển thị {(currentPage - 1) * PAGE_SIZE + 1} - {Math.min(currentPage * PAGE_SIZE, totalItems)} trong {totalItems} bài
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50">
+                    <ChevronLeft size={18} />
+                  </button>
+                  {getPageNumbers().map((page, i) => page === "..." ? (
+                    <span key={i} className="px-3 py-1 text-slate-500">...</span>
+                  ) : (
+                    <button key={page} onClick={() => setCurrentPage(page as number)} className={`px-3 py-1.5 rounded-lg text-sm font-medium ${currentPage === page ? "bg-emerald-600 text-white" : "hover:bg-slate-100 text-slate-700"}`}>
+                      {page}
+                    </button>
+                  ))}
+                  <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-50">
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal Tạo / Sửa */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <h2 className="text-xl font-semibold">{editingArticle ? "Sửa bài viết" : "Viết bài mới"}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-lg"><X size={20} /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tiêu đề *</label>
+                    <input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Nhập tiêu đề..." className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nội dung</label>
+                    <textarea rows={15} value={formData.content} onChange={e => setFormData({ ...formData, content: e.target.value })} placeholder="Viết nội dung bài viết..." className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 resize-none" />
+                  </div>
+                </div>
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Thumbnail URL</label>
+                    <input value={formData.thumbnail} onChange={e => setFormData({ ...formData, thumbnail: e.target.value })} placeholder="https://..." className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                    {formData.thumbnail && <img src={formData.thumbnail} alt="Preview" className="mt-3 w-full h-48 object-cover rounded-lg" />}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Danh mục</label>
+                    <select value={formData.categoryId} onChange={e => setFormData({ ...formData, categoryId: e.target.value })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg">
+                      <option value="">Chọn danh mục</option>
+                      {categories.map((cat: any) => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tags (có thể chọn nhiều)
+                    </label>
+                    <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 border border-slate-300 rounded-lg">
+                      {categories.length === 0 ? (
+                        <p className="text-slate-400 text-sm">Đang tải tag...</p>
+                      ) : (
+                        tags.map((tag) => (
+                          <label
+                            key={tag.id}
+                            className="flex items-center gap-2 cursor-pointer has-[:checked]:opacity-100 opacity-70"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.tagIds?.includes(tag.id!) || false}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  tagIds: checked
+                                    ? [...(prev.tagIds || []), tag.id!]
+                                    : (prev.tagIds || []).filter(id => id !== tag.id)
+                                }));
+                              }}
+                              className="rounded text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span className="text-sm">{tag.name}</span>
+                          </label>
+                        ))
                       )}
                     </div>
                   </div>
-
-                  {/* Nội dung bài viết ở giữa */}
-                  <div className="flex-1 flex flex-col justify-between gap-3">
-                    <div>
-                      <h3 className="text-base md:text-lg font-semibold text-slate-900 line-clamp-2">
-                        {article.title || "(Không có tiêu đề)"}
-                      </h3>
-
-                      <div className="flex flex-wrap gap-2 mt-2 mb-1">
-                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                          {article.categoryName || "Chưa gán danh mục"}
-                        </span>
-                        <span className="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-700 rounded">
-                          {article.baseUrl || "Không rõ nguồn"}
-                        </span>
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded ${getStatusClasses(
-                            article.status
-                          )}`}
-                        >
-                          {getStatusLabel(article.status)}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center text-xs md:text-sm text-slate-600 gap-2">
-                        <span>{article.viewCount ?? 0} lượt xem</span>
-                        <span className="hidden md:inline">•</span>
-                        <span>
-                          {article.createdAt?.slice(0, 10) || "Chưa có ngày"}
-                        </span>
-                      </div>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Trạng thái</label>
+                    <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as any })} className="w-full px-4 py-2.5 border border-slate-300 rounded-lg">
+                      <option value="draft">Bản nháp</option>
+                      <option value="pending">Chờ duyệt</option>
+                      <option value="published">Đã xuất bản</option>
+                    </select>
                   </div>
-
-                  {/* Nút action bên phải */}
-                  <div className="flex md:flex-col gap-2 md:w-32 md:items-stretch">
-                    {article.status !== "published" && (
-                      <button
-                        onClick={() => handleApprove(article)}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 text-xs md:text-sm bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100"
-                      >
-                        <CheckCircle size={16} className="mr-1" />
-                        Duyệt
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleGenerate(article)}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 text-xs md:text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100"
-                    >
-                      <Sparkles size={16} className="mr-1" />
-                      Generate
-                    </button>
-
-                    <button className="flex-1 inline-flex items-center justify-center px-3 py-2 text-xs md:text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100">
-                      <Edit2 size={16} className="mr-1" />
-                      Sửa
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(article)}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 text-xs md:text-sm bg-red-50 text-red-700 rounded-lg hover:bg-red-100"
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Xóa
-                    </button>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Meta Title (SEO)</label>
+                    <input value={formData.metaTitle} onChange={e => setFormData({ ...formData, metaTitle: e.target.value })} placeholder="Tối đa 60 ký tự" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Meta Description</label>
+                    <textarea rows={3} value={formData.metaDescription} onChange={e => setFormData({ ...formData, metaDescription: e.target.value })} placeholder="Tối đa 160 ký tự" className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-sm resize-none" />
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* ✅ Thanh phân trang */}
-          {totalPages > 1 && (
-            <div className="flex flex-col md:flex-row items-center justify-between mt-6 gap-3">
-              <span className="text-sm text-slate-600">
-                Trang {currentPage}/{totalPages} • {filteredArticles.length} bài
-              </span>
-              <div className="inline-flex rounded-md shadow-sm overflow-hidden border border-slate-200 bg-white">
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) => Math.max(1, p - 1))
-                  }
-                  disabled={currentPage === 1}
-                  className="px-3 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                >
-                  Trước
-                </button>
-                <span className="px-3 py-1.5 text-sm border-l border-r border-slate-200">
-                  {currentPage}
-                </span>
-                <button
-                  onClick={() =>
-                    setCurrentPage((p) =>
-                      Math.min(totalPages, p + 1)
-                    )
-                  }
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
-                >
-                  Sau
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-50">Hủy</button>
+                <button onClick={handleSave} className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                  <Save size={18} />
+                  {editingArticle ? "Cập nhật" : "Xuất bản"}
                 </button>
               </div>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

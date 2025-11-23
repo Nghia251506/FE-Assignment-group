@@ -33,6 +33,17 @@ export const fetchPosts = createAsyncThunk<
   }
 });
 
+export const createPost = createAsyncThunk<
+  Post,                    // trả về Post mới
+  Partial<Post>            // data gửi lên
+>("post/createPost", async (data, { rejectWithValue }) => {
+  try {
+    return await postService.create(data);
+  } catch (err: any) {
+    return rejectWithValue(err.response?.data || err.message || "Tạo bài viết thất bại");
+  }
+});
+
 export const generatePost = createAsyncThunk<Post, number>(
   "post/generatePost",
   async (id, { rejectWithValue }) => {
@@ -105,8 +116,8 @@ const postSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Fetch posts failed";
       });
-      builder
-    .addCase(generatePost.pending, (state) => {
+    builder
+      .addCase(generatePost.pending, (state) => {
         // tuỳ anh có muốn show loading chung hay không
         state.loading = true;
         state.error = null;
@@ -125,6 +136,29 @@ const postSlice = createSlice({
       .addCase(generatePost.rejected, (state, action) => {
         state.loading = false;
         state.error = (action.payload as string) || "Generate post failed";
+      });
+    builder
+      .addCase(createPost.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createPost.fulfilled, (state, action) => {
+        state.loading = false;
+        const newPost = action.payload;
+
+        // Thêm bài mới vào đầu danh sách (mới nhất lên trên)
+        state.items.unshift(newPost);
+
+        // Cập nhật tổng số (vì đang client-side)
+        state.total += 1;
+
+        // Nếu đang filter thì vẫn thêm vào (vì người dùng vừa tạo mà)
+        // Nếu anh muốn ẩn bài nháp thì thêm điều kiện:
+        // if (newPost.status !== "removed") state.items.unshift(newPost);
+      })
+      .addCase(createPost.rejected, (state, action) => {
+        state.loading = false;
+        state.error = (action.payload as string) || "Tạo bài viết thất bại";
       });
 
     // update

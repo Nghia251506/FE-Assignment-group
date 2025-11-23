@@ -10,21 +10,6 @@ export interface PageResponse<T> {
   last: boolean;
 }
 
-// --- TENANT ---
-
-export type TenantStatus = "ACTIVE" | "SUSPENDED";
-
-export interface Tenant {
-  id: number;
-  code: string;
-  name: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  maxUsers: number;
-  status: TenantStatus;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 // --- USER ---
 
@@ -32,7 +17,6 @@ export type UserRole = "ADMIN" | "EDITOR" | "VIEWER";
 
 export interface User {
   id: number;
-  tenant?: Tenant | null;
   username: string;
   passwordHash?: string; // BE không trả cũng được
   fullName?: string;
@@ -49,6 +33,7 @@ export interface User {
 export interface Category {
   slug: string;
   id: number;
+  parentId?:number | null;
   code: string;
   name: string;
   description?: string;
@@ -62,8 +47,6 @@ export interface Category {
 export interface Source {
   id?: number;
 
-  // Quan hệ
-  tenantId?: number;
   categoryId?: number;
   categoryName?: string;   // nếu BE trả ra kèm tên category
 
@@ -91,9 +74,10 @@ export type PostStatus = "pending" | "draft" | "published" | "removed";
 export type DeleteStatus = "Active" | "Deleted";
 
 export interface Post {
+  metaDescription: string;
+  metaTitle: string;
   categoryId: number;
   id: number;
-  tenant?: Tenant | null;
   source?: Source | null;
   category?: Category | null;
   originUrl: string;
@@ -115,13 +99,16 @@ export interface Post {
   deletedAt?: string;
   baseUrl?: string;
   categoryName?: string;
+  tagIds?: number[];        // ← THÊM DÒNG NÀY
+  tags?: Tag[];
 }
 
 // --- TAG & POST_TAG (FE thường không quản lý trực tiếp PostTag) ---
 
 export interface Tag {
+  postCount: number;
+  color: string;
   id: number;
-  tenant?: Tenant | null;
   name: string;
   slug?: string;
   createdAt?: string;
@@ -142,7 +129,6 @@ export type TriggeredBy = "MANUAL" | "SCHEDULED";
 
 export interface CrawlLog {
   id: number;
-  tenant?: Tenant | null;
   source?: Source | null;
   crawlType: CrawlType;
   status: CrawlStatus;

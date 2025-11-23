@@ -1,33 +1,41 @@
+// src/services/tagService.ts
 import axiosClient from "../api/axiosClient";
-import { PageResponse, Tag } from "../types/models";
+import type { Tag } from "../types/models";
 
-const BASE_URL = "/api/admin/tags";
-
-export interface TagSearchParams {
-  page?: number;
-  size?: number;
-  q?: string;
+export interface TagPayload {
+  name: string;
+  color?: string;
 }
 
-export const tagService = {
-  async getPage(params: TagSearchParams = {}): Promise<PageResponse<Tag>> {
-    const response = await axiosClient.get<PageResponse<Tag>>(BASE_URL, {
-      params,
-    });
-    return response.data;
-  },
-
+const tagService = {
+  // Lấy tất cả tags
   async getAll(): Promise<Tag[]> {
-    const response = await axiosClient.get<Tag[]>(BASE_URL + "/all");
-    return response.data;
+    const res = await axiosClient.get<Tag[]>("/admin/tags");
+    return res.data;
   },
 
-  async create(payload: Partial<Tag>): Promise<Tag> {
-    const response = await axiosClient.post<Tag>(BASE_URL, payload);
-    return response.data;
+  // Tạo mới tag
+  async create(data: TagPayload): Promise<Tag> {
+    const res = await axiosClient.post<Tag>("/admin/tags", data);
+    return res.data;
   },
 
+  // Upsert (tạo nếu chưa có, cập nhật nếu có) – thường dùng cho tag input
+  async upsert(data: TagPayload): Promise<Tag> {
+    const res = await axiosClient.post<Tag>("/admin/tags/upsert", data);
+    return res.data;
+  },
+
+  // Cập nhật tag
+  async update(id: number, data: Partial<TagPayload>): Promise<Tag> {
+    const res = await axiosClient.put<Tag>(`/admin/tags/${id}`, data);
+    return res.data;
+  },
+
+  // Xóa tag
   async delete(id: number): Promise<void> {
-    await axiosClient.delete(`${BASE_URL}/${id}`);
+    await axiosClient.delete(`/admin/tags/${id}`);
   },
 };
+
+export default tagService;

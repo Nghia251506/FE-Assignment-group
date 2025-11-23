@@ -15,6 +15,7 @@ import Settings from './pages/admin/Settings';
 // --- THÊM IMPORT MỚI ---
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import Tags from './pages/admin/Tags';
 // ------------------------
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
           <Route path="articles" element={<Articles />} />
           <Route path="categories" element={<Categories />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="tags" element={<Tags />} />
         </Route>
         
         {/* Em có thể thêm một route 404 ở đây nếu muốn */}

@@ -1,12 +1,12 @@
+// src/redux/slices/tagSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { PageResponse, Tag } from "../../types/models";
-import { tagService, TagSearchParams } from "../../services/tagService";
+import tagService, { TagPayload } from "../../services/tagService";
+import type { Tag } from "../../types/models";
 
-export interface TagState {
+interface TagState {
   items: Tag[];
-  page?: PageResponse<Tag>;
   loading: boolean;
-  error?: string | null;
+  error: string | null;
 }
 
 const initialState: TagState = {
@@ -15,133 +15,97 @@ const initialState: TagState = {
   error: null,
 };
 
-export const fetchTagPage = createAsyncThunk<
-  PageResponse<Tag>,
-  TagSearchParams | undefined
->("tag/fetchPage", async (params, thunkAPI) => {
-  try {
-    return await tagService.getPage(params);
-  } catch (error: any) {
-    return thunkAPI.rejectWithValue(error.message || "Fetch tags failed");
-  }
+export const fetchTags = createAsyncThunk("tag/fetchTags", async () => {
+  return await tagService.getAll();
 });
 
-export const fetchAllTags = createAsyncThunk<Tag[]>(
-  "tag/fetchAll",
-  async (_, thunkAPI) => {
+export const createTag = createAsyncThunk<Tag, TagPayload>(
+  "tag/createTag",
+  async (data, { rejectWithValue }) => {
     try {
-      return await tagService.getAll();
-    } catch (error: any) {
-      return thunkAPI.rejectWithValue(error.message || "Fetch all tags failed");
+      return await tagService.create(data);
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Tạo tag thất bại");
     }
   }
 );
 
-export const createTag = createAsyncThunk<
+export const upsertTag = createAsyncThunk<Tag, TagPayload>(
+  "tag/upsertTag",
+  async (data, { rejectWithValue }) => {
+    try {
+      return await tagService.upsert(data);
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Upsert tag thất bại");
+    }
+  }
+);
+
+export const updateTag = createAsyncThunk<
   Tag,
-  Partial<Tag>
->("tag/create", async (payload, thunkAPI) => {
+  { id: number; data: Partial<TagPayload> }
+>("tag/updateTag", async ({ id, data }, { rejectWithValue }) => {
   try {
-    return await tagService.create(payload);
-  } catch (error: any) {
-    return thunkAPI.rejectWithValue(error.message || "Create tag failed");
+    return await tagService.update(id, data);
+  } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Cập nhật tag thất bại");
   }
 });
 
-export const deleteTag = createAsyncThunk<
-  number,
-  number
->("tag/delete", async (id, thunkAPI) => {
-  try {
-    await tagService.delete(id);
-    return id;
-  } catch (error: any) {
-    return thunkAPI.rejectWithValue(error.message || "Delete tag failed");
+export const deleteTag = createAsyncThunk<void, number>(
+  "tag/deleteTag",
+  async (id, { rejectWithValue }) => {
+    try {
+      await tagService.delete(id);
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Xóa tag thất bại");
+    }
   }
-});
+);
 
 const tagSlice = createSlice({
   name: "tag",
   initialState,
   reducers: {},
   extraReducers: (builder) => {
-    // fetch page
     builder
-      .addCase(fetchTagPage.pending, (state) => {
+      // Fetch
+      .addCase(fetchTags.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(
-        fetchTagPage.fulfilled,
-        (state, action: PayloadAction<PageResponse<Tag>>) => {
-          state.loading = false;
-          state.page = action.payload;
-          state.items = action.payload.content;
-        }
-      )
-      .addCase(fetchTagPage.rejected, (state, action) => {
+      .addCase(fetchTags.fulfilled, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as string) || "Fetch tags failed";
-      });
-
-    // fetch all (cho chỗ select tags)
-    builder
-      .addCase(fetchAllTags.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.items = action.payload;
       })
-      .addCase(
-        fetchAllTags.fulfilled,
-        (state, action: PayloadAction<Tag[]>) => {
-          state.loading = false;
-          state.items = action.payload;
-        }
-      )
-      .addCase(fetchAllTags.rejected, (state, action) => {
+      .addCase(fetchTags.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as string) || "Fetch all tags failed";
-      });
-
-    // create
-    builder
-      .addCase(createTag.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.error = action.payload as string;
       })
+
+      // Create / Upsert
       .addCase(createTag.fulfilled, (state, action) => {
-        state.loading = false;
-        const newTag = action.payload;
-        state.items.unshift(newTag);
-        if (state.page) {
-          state.page.content.unshift(newTag);
-          state.page.totalElements += 1;
+        state.items.push(action.payload);
+      })
+      .addCase(upsertTag.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((t) => t.name.toLowerCase() === action.payload.name.toLowerCase());
+        if (idx !== -1) {
+          state.items[idx] = action.payload;
+        } else {
+          state.items.push(action.payload);
         }
       })
-      .addCase(createTag.rejected, (state, action) => {
-        state.loading = false;
-        state.error = (action.payload as string) || "Create tag failed";
-      });
 
-    // delete
-    builder
-      .addCase(deleteTag.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      // Update
+      .addCase(updateTag.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((t) => t.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
       })
+
+      // Delete
       .addCase(deleteTag.fulfilled, (state, action) => {
-        state.loading = false;
-        const deletedId = action.payload;
-        state.items = state.items.filter((t) => t.id !== deletedId);
-        if (state.page) {
-          state.page.content = state.page.content.filter(
-            (t) => t.id !== deletedId
-          );
-          state.page.totalElements -= 1;
-        }
-      })
-      .addCase(deleteTag.rejected, (state, action) => {
-        state.loading = false;
-        state.error = (action.payload as string) || "Delete tag failed";
+        // action.meta.arg là id
+        state.items = state.items.filter((t) => t.id !== action.meta.arg);
       });
   },
 });

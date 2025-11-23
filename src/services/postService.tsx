@@ -5,7 +5,7 @@ import type { PageResponse } from "../types/models";
 export interface FetchPostParams {
   page?: number;
   size?: number;
-  status?: string; // nếu sau này muốn filter theo status (pending/published...)
+  status?: string;
 }
 
 const postService = {
@@ -19,43 +19,38 @@ const postService = {
       params: { page, size, status },
     });
 
-    // ⚠️ Trả về res.data để tránh lưu AxiosResponse (headers...) vào Redux
     return res.data;
   },
+
+  // Tạo bài viết mới
+  async create(data: Partial<Post>): Promise<Post> {
+    const res = await axiosClient.post<Post>("/admin/posts", data);
+    return res.data;
+  },
+
   async generatePost(id: number): Promise<Post> {
     const res = await axiosClient.post<Post>(`/admin/posts/${id}/generate`);
     return res.data;
   },
 
-  // mấy hàm này để sau Articles dùng thêm
   getById(id: number) {
-    return axiosClient
-      .get<Post>(`/admin/posts/${id}`)
-      .then((res) => res.data);
+    return axiosClient.get<Post>(`/admin/posts/${id}`).then((res) => res.data);
   },
 
   update(id: number, data: Partial<Post>) {
-    return axiosClient
-      .put<Post>(`/admin/posts/${id}`, data)
-      .then((res) => res.data);
+    return axiosClient.put<Post>(`/admin/posts/${id}`, data).then((res) => res.data);
   },
 
   delete(id: number) {
-    return axiosClient
-      .delete<void>(`/admin/posts/${id}`)
-      .then((res) => res.data);
+    return axiosClient.delete<void>(`/admin/posts/${id}`).then((res) => res.data);
   },
 
   restore(id: number) {
-    return axiosClient
-      .put<void>(`/admin/posts/${id}/restore`)
-      .then((res) => res.data);
+    return axiosClient.put<void>(`/admin/posts/${id}/restore`).then((res) => res.data);
   },
 
   publish(id: number) {
-    return axiosClient
-      .put<void>(`/admin/posts/${id}/publish`)
-      .then((res) => res.data);
+    return axiosClient.put<void>(`/admin/posts/${id}/publish`).then((res) => res.data);
   },
 };
 

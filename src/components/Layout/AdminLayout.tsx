@@ -16,6 +16,7 @@ export default function AdminLayout() {
     { path: '/sources', icon: Globe, label: 'Nguồn Trang' },
     { path: '/articles', icon: FileText, label: 'Bài Viết' },
     { path: '/categories', icon: FolderOpen, label: 'Danh Mục' },
+    { path: '/tags', icon: Settings, label: 'Tag' },
     { path: '/settings', icon: Settings, label: 'Cấu Hình' },
   ];
 

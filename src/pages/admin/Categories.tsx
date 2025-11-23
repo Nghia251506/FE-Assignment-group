@@ -1,4 +1,4 @@
-import { Plus, Search, Edit2, Trash2 } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, ChevronDown } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import {
@@ -18,6 +18,7 @@ type FormState = {
   name: string;
   description: string;
   isActive: boolean;
+  parentId?:number | null;
 };
 
 const colorClasses: Record<string, string> = {
@@ -57,7 +58,14 @@ export default function Categories() {
     name: "",
     description: "",
     isActive: true,
+    parentId: null as number | null,
   });
+
+  const [expandedCategory, setExpandedCategory] = useState<number | null>(null); // track expanded categories
+
+  const handleToggleExpand = (categoryId: number) => {
+    setExpandedCategory(prev => (prev === categoryId ? null : categoryId)); // toggle the dropdown
+  };
 
   // Load danh mục lần đầu
   useEffect(() => {
@@ -91,6 +99,7 @@ export default function Categories() {
       name: "",
       description: "",
       isActive: true,
+      parentId: editingCategory?.parentId || null,
     });
     setIsModalOpen(true);
   };
@@ -103,6 +112,7 @@ export default function Categories() {
       name: category.name || "",
       description: category.description || "",
       isActive: category.isActive ?? true,
+      parentId: editingCategory?.parentId || null,
     });
     setIsModalOpen(true);
   };
@@ -131,6 +141,8 @@ export default function Categories() {
       name: formState.name.trim(),
       description: formState.description.trim() || undefined,
       isActive: formState.isActive,
+      parentId: formState.parentId || null,
+      
       // tenantId: nếu cần override thì set ở đây, còn không để undefined để dùng DEFAULT_TENANT_ID trong categoryApi
     };
 
@@ -150,6 +162,13 @@ export default function Categories() {
       }
       setIsModalOpen(false);
       setEditingCategory(null);
+      setFormState({
+      name: "",
+      code: "",
+      description: "",
+      isActive: true,
+      parentId: null,
+    });
     } catch (err) {
       console.error(err);
       toast.error("Lưu danh mục thất bại");
@@ -192,6 +211,7 @@ export default function Categories() {
         </div>
 
         {/* Content */}
+        {/* Content */}
         {loading ? (
           <div className="p-8 text-center text-slate-500">Đang tải...</div>
         ) : filteredCategories.length === 0 ? (
@@ -199,81 +219,164 @@ export default function Categories() {
             Không có danh mục nào.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {filteredCategories.map((category, index) => {
-              const color =
-                colorList[index % colorList.length] || colorList[0];
-              const slug = slugify(category.name);
-              const articlesCount =
-                articleCount[category.slug] ?? 0; // Lấy số bài viết từ Redux
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-left text-slate-500">
+              <thead className="text-xs text-slate-700 uppercase bg-slate-100">
+                <tr>
+                  <th className="px-6 py-3">Tên Danh Mục</th>
+                  <th className="px-6 py-3">Slug</th>
+                  <th className="px-6 py-3">Số bài viết</th>
+                  <th className="px-6 py-3">Trạng thái</th>
+                  <th className="px-6 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCategories
+                  .filter((category) => category.parentId === null)
+                  .map((category) => {
+                    const articlesCount = articleCount[category.slug] ?? 0;
+                    const isExpanded = expandedCategory === category.id;
+                    const children = categories.filter((c) => c.parentId === category.id);
 
-              return (
-                <div
-                  key={category.id}
-                  className="border border-slate-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        colorClasses[color]
-                      }`}
-                    >
-                      {category.name}
-                    </div>
-                    {category.isActive === false && (
-                      <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600">
-                        Inactive
-                      </span>
-                    )}
-                  </div>
+                    return (
+                      <React.Fragment key={category.id}>
+                        {/* DÒNG CHA - Click toàn bộ ô tên để mở rộng */}
+                        <tr className="border-b hover:bg-slate-50 transition-all duration-200">
+                          <td
+                            className="px-6 py-4 cursor-pointer select-none"
+                            onClick={() => children.length > 0 && handleToggleExpand(category.id!)}
+                          >
+                            <div className="flex items-center gap-3">
+                              {/* Mũi tên chỉ hiện khi có con */}
+                              {children.length > 0 && (
+                                <span
+                                  className={`transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"
+                                    }`}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown size={18} className="text-slate-600" />
+                                  ) : (
+                                    <ChevronDown size={18} className="text-slate-500" />
+                                  )}
+                                </span>
+                              )}
+                              {/* Nếu không có con thì để khoảng trống cho đều */}
+                              {children.length === 0 && <span className="w-6" />}
 
-                  <div className="space-y-2">
-                    {category.code && (
-                      <p className="text-sm text-slate-600">
-                        Mã:{" "}
-                        <code className="text-xs bg-slate-100 px-2 py-1 rounded">
-                          {category.code}
-                        </code>
-                      </p>
-                    )}
-                    <p className="text-sm text-slate-600">
-                      Slug:{" "}
-                      <code className="text-xs bg-slate-100 px-2 py-1 rounded">
-                        {category.slug || "-"}
-                      </code>
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      Số bài viết:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {articlesCount}
-                      </span>
-                    </p>
-                    {category.description && (
-                      <p className="text-xs text-slate-500 line-clamp-2">
-                        {category.description}
-                      </p>
-                    )}
-                  </div>
+                              <span
+                                className={`font-medium ${children.length > 0
+                                    ? "text-emerald-700 hover:text-emerald-800"
+                                    : "text-slate-800"
+                                  }`}
+                              >
+                                {category.name}
+                              </span>
+                              {children.length > 0 && (
+                                <span className="text-xs text-slate-500 ml-2">
+                                  ({children.length} con)
+                                </span>
+                              )}
+                            </div>
+                          </td>
 
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-200">
-                    <button
-                      onClick={() => handleEditClick(category)}
-                      className="flex-1 flex items-center justify-center px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
-                    >
-                      <Edit2 size={16} className="mr-1" />
-                      Sửa
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(category)}
-                      className="flex-1 flex items-center justify-center px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"
-                    >
-                      <Trash2 size={16} className="mr-1" />
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                          <td className="px-6 py-4 text-slate-600">
+                            {category.slug || "-"}
+                          </td>
+                          <td className="px-6 py-4 font-medium">{articlesCount}</td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${category.isActive
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-red-100 text-red-800"
+                                }`}
+                            >
+                              {category.isActive ? "Hoạt động" : "Tắt"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation(); // quan trọng: tránh trigger mở rộng khi click nút
+                                  handleEditClick(category);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 transition-colors"
+                                title="Sửa"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(category);
+                                }}
+                                className="text-red-600 hover:text-red-800 transition-colors"
+                                title="Xóa"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* DANH MỤC CON - mở rộng mượt mà */}
+                        {isExpanded &&
+                          children.map((child, index) => {
+                            const childCount = articleCount[child.slug] ?? 0;
+
+                            return (
+                              <tr
+                                key={child.id}
+                                className="border-b bg-slate-50/70 hover:bg-slate-100 transition-all duration-200"
+                              >
+                                <td className="px-6 py-4 pl-14">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-slate-400">└</span>
+                                    <span className="font-medium text-slate-700">
+                                      {child.name}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 text-slate-600">
+                                  {child.slug || "-"}
+                                </td>
+                                <td className="px-6 py-4">{childCount}</td>
+                                <td className="px-6 py-4">
+                                  <span
+                                    className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${child.isActive
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-red-100 text-red-800"
+                                      }`}
+                                  >
+                                    {child.isActive ? "Hoạt động" : "Tắt"}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => handleEditClick(child)}
+                                      className="text-blue-600 hover:text-blue-800"
+                                      title="Sửa"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteClick(child)}
+                                      className="text-red-600 hover:text-red-800"
+                                      title="Xóa"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </React.Fragment>
+                    );
+                  })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -293,29 +396,58 @@ export default function Categories() {
                 }}
                 className="text-slate-500 hover:text-slate-700"
               >
-                ✕
+                X
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+              {/* Tên danh mục */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Tên danh mục <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  required
                   value={formState.name}
                   onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      name: e.target.value,
-                    }))
+                    setFormState((prev) => ({ ...prev, name: e.target.value }))
                   }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Ví dụ: Công Nghệ"
                 />
               </div>
 
+              {/* Danh mục cha – MỚI THÊM */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Danh mục cha (tùy chọn)
+                </label>
+                <select
+                  value={formState.parentId || ""}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      parentId: e.target.value ? Number(e.target.value) : null,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">-- Không có danh mục cha --</option>
+                  {categories
+                    .filter((cat: any) => cat.id !== editingCategory?.id && cat.parentId === null) // không cho chọn chính nó làm cha
+                    .map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  Chọn nếu danh mục này là con của danh mục khác
+                </p>
+              </div>
+
+              {/* Mã danh mục */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Mã danh mục (code)
@@ -324,16 +456,14 @@ export default function Categories() {
                   type="text"
                   value={formState.code}
                   onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      code: e.target.value,
-                    }))
+                    setFormState((prev) => ({ ...prev, code: e.target.value }))
                   }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="Ví dụ: TECH"
                 />
               </div>
 
+              {/* Mô tả */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Mô tả
@@ -352,6 +482,7 @@ export default function Categories() {
                 />
               </div>
 
+              {/* Active */}
               <div className="flex items-center gap-2">
                 <input
                   id="isActive"
@@ -363,17 +494,15 @@ export default function Categories() {
                       isActive: e.target.checked,
                     }))
                   }
-                  className="h-4 w-4 text-emerald-600 border-slate-300 rounded"
+                  className="h-4 w-4 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500"
                 />
-                <label
-                  htmlFor="isActive"
-                  className="text-sm text-slate-700 select-none"
-                >
+                <label htmlFor="isActive" className="text-sm text-slate-700 select-none">
                   Hoạt động (Active)
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 mt-2">
+              {/* Nút */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 mt-4">
                 <button
                   type="button"
                   onClick={() => {

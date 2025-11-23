@@ -9,7 +9,7 @@ export type CategoryPayload = {
   name: string;
   description?: string;
   isActive?: boolean;
-  tenantId?: number; // BE cần tenantId khi create
+  parentId?: number | null; // BE cần tenantId khi create
 };
 
 export const categoryApi = {
