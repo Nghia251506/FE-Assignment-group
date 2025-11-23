@@ -8,6 +8,7 @@ import tagReducer from "./slices/tagSlice";
 import crawlLogReducer from "./slices/crawlLogSlice";
 // --- THÊM IMPORT MỚI ---
 import uiReducer from "./slices/uiSlice";
+import authReducer from "./slices/authSlice"
 
 export const store = configureStore({
   reducer: {
@@ -20,6 +21,7 @@ export const store = configureStore({
     crawlLog: crawlLogReducer,
     // --- THÊM REDUCER MỚI ---
     ui: uiReducer,
+    auth: authReducer
   },
 });
 

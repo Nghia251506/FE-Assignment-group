@@ -273,7 +273,7 @@ export default function Categories() {
                               </span>
                               {children.length > 0 && (
                                 <span className="text-xs text-slate-500 ml-2">
-                                  ({children.length} con)
+                                  ({children.length})
                                 </span>
                               )}
                             </div>

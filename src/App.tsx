@@ -14,11 +14,23 @@ import Settings from './pages/admin/Settings';
 
 // --- THÊM IMPORT MỚI ---
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import Tags from './pages/admin/Tags';
-// ------------------------
+import ProtectedRoute from './components/ProtectedRoute';
+import { useAppDispatch, useAppSelector } from "./redux/hooks"; // hoặc hook của anh
+import { selectCurrentUser, selectIsAuthenticated } from "./redux/selectors/authSelectors";
+import { fetchMe } from "./redux/slices/authSlice";
+import { useEffect } from "react";
 
 function App() {
+  const dispatch = useAppDispatch();
+  const user = useAppSelector(selectCurrentUser);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  useEffect(() => {
+  if (!user && !isAuthenticated) {
+    dispatch(fetchMe());
+  }
+}, []);
   return (
     <BrowserRouter>
       <Routes>
@@ -26,11 +38,8 @@ function App() {
         {/* === Các Route cho Xác thực (Auth) === */}
         {/* Đây là 2 route mới, nằm độc lập */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-
-
         {/* === Các Route cho Admin (Protected) === */}
-        <Route path="/" element={<AdminLayout />}>
+        <Route path="/" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="sources" element={<Sources />} />
@@ -48,3 +57,7 @@ function App() {
 }
 
 export default App;
+
+function dispatch(arg0: any) {
+  throw new Error('Function not implemented.');
+}
