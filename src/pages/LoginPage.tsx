@@ -1,38 +1,46 @@
-// src/pages/Login.tsx
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../redux/hooks";
-import { login } from "../redux/slices/authSlice";
+// src/pages/Login.tsx – SIÊU PHẨM LOGIN 2025 DÀNH RIÊNG CHO ANH NGHĨA!!!
+import React, { useState, useEffect } from "react";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { Login } from "../redux/slices/authSlice";
 import { toast } from "react-toastify";
 import { Loader2, LogIn } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { getUserFromJwt } from "../utils/jwt";
 
-export default function Login() {
-  const [loading, setLoading] = useState(false);
+export default function LoginPage() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
+
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { currentUser, loading, error } = useAppSelector((state) => state.auth);
+
+  // NẾU ĐÃ ĐĂNG NHẬP RỒI → TỰ ĐỘNG CHUYỂN VÀO DASHBOARD NGAY!!!
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.username || !formData.password) {
-      toast.error("Vui lòng nhập username và password");
-      return;
-    }
 
-    setLoading(true);
     try {
-      const result = await dispatch(login(formData)).unwrap();
-      toast.success("Đăng nhập thành công! Chào " + result.user.username);
-      navigate("/admin/articles"); // tự động vào trang admin
-    } catch (err: any) {
-      toast.error(err || "Sai tài khoản hoặc mật khẩu");
-    } finally {
-      setLoading(false);
+      await dispatch(Login(formData)).unwrap();
+      // → thành công → useEffect trên sẽ tự redirect
+    } catch (err) {
+      // lỗi đã được toast ở useEffect
     }
   };
+  useEffect(() => {
+    console.log(currentUser)
+    if (currentUser) {
+      if (currentUser.roleCode === "ADMIN") {
+        toast.success(`Chào Admin ${currentUser.username}!`);
+        navigate("/dashboard", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+    }
+  }, [currentUser, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center p-4">
@@ -53,9 +61,12 @@ export default function Login() {
             <input
               type="text"
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Nhập username"
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+              placeholder="admin"
+              required
               disabled={loading}
             />
           </div>
@@ -67,9 +78,12 @@ export default function Login() {
             <input
               type="password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-              placeholder="Nhập mật khẩu"
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition"
+              placeholder="••••••••"
+              required
               disabled={loading}
             />
           </div>
@@ -77,26 +91,26 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 text-white py-3.5 rounded-lg font-medium hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-emerald-600 text-white py-3.5 rounded-lg font-semibold hover:bg-emerald-700 transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin" size={20} />
+                <Loader2 className="animate-spin" size={22} />
                 Đang đăng nhập...
               </>
             ) : (
               <>
-                <LogIn size={20} />
-                Đăng nhập
+                <LogIn size={22} />
+                Đăng nhập ngay
               </>
             )}
           </button>
-        </form>
 
-        <div className="mt-8 text-center text-sm text-slate-500">
-          <p>Demo account:</p>
-          <p className="font-mono mt-1">admin / admin123</p>
-        </div>
+          <div className="text-center text-sm text-slate-500 mt-6">
+            <p>Demo account:</p>
+            <p className="font-medium text-slate-700">admin / admin123</p>
+          </div>
+        </form>
       </div>
     </div>
   );

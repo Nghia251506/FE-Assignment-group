@@ -21,11 +21,12 @@ export interface User {
   passwordHash?: string; // BE không trả cũng được
   fullName?: string;
   email?: string;
-  role: UserRole;
+  roleCode: UserRole;
   isActive: boolean;
   lastLoginAt?: string;
   createdAt?: string;
   updatedAt?: string;
+  roleName:string;
 }
 
 // --- CATEGORY ---
