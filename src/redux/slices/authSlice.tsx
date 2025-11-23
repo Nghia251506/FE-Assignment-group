@@ -3,6 +3,7 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import { loginApi } from "../../services/authService"; // giữ nguyên service của anh
 import { User, UserRole } from "../../types/models";
 import { getUserFromJwt } from "../../utils/jwt"; // file decode JWT
+import axiosClient from "../../api/axiosClient";
 
 // STATE CHỈ CÓ currentUser, KHÔNG LƯU TOKEN VÀO LOCALSTORAGE
 interface AuthState {
@@ -55,7 +56,7 @@ export const Login = createAsyncThunk<User, { username: string; password: string
 
 // LOGOUT (nếu có endpoint xóa cookie)
 export const Logout = createAsyncThunk("auth/logout", async () => {
-  // await axiosClient.post("/auth/logout"); // nếu có
+  await axiosClient.post("/auth/logout"); // nếu có
   // Nếu không có thì chỉ cần F5 là cookie vẫn còn → nhưng Redux sẽ xóa user
 });
 

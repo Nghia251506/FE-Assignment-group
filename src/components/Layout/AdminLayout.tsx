@@ -1,12 +1,15 @@
 // --- THÊM 'useNavigate' VÀO IMPORT ---
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, FileText, FolderOpen, Globe, Settings, LogOut, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { ToastContainer } from 'react-toastify';
+import {Logout} from "../../redux/slices/authSlice"
 
 export default function AdminLayout() {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const dispatch = useAppDispatch();
   
   // --- THÊM MỚI BƯỚC 1: Khởi tạo hook navigate ---
   const navigate = useNavigate();
@@ -21,13 +24,19 @@ export default function AdminLayout() {
   ];
 
   // --- THÊM MỚI BƯỚC 2: Tạo hàm xử lý đăng xuất ---
-  const handleLogout = () => {
-    // Trong thực tế, em sẽ xóa token/session đã lưu ở đây
-    // Ví dụ: localStorage.removeItem('authToken');
-    
-    // Sau đó chuyển hướng về trang login
-    console.log("Đã đăng xuất, đang chuyển về /login");
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Gọi action Logout trong Redux để xóa thông tin người dùng khỏi store
+      await dispatch(Logout()).unwrap();
+
+      // Xóa cookie JWT từ trình duyệt
+      document.cookie = "access_token=; Max-Age=0; path=/"; // Xóa cookie "access_token"
+
+      // Điều hướng về trang đăng nhập
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error("Lỗi khi đăng xuất: ", err);
+    }
   };
 
   return (
