@@ -15,7 +15,7 @@ const postService = {
     const size = params?.size ?? 20;
     const status = params?.status;
 
-    const res = await axiosClient.get<PageResponse<Post>>("/admin/posts", {
+    const res = await axiosClient.get<PageResponse<Post>>("api/admin/posts", {
       params: { page, size, status },
     });
 
@@ -24,33 +24,33 @@ const postService = {
 
   // Tạo bài viết mới
   async create(data: Partial<Post>): Promise<Post> {
-    const res = await axiosClient.post<Post>("/admin/posts", data);
+    const res = await axiosClient.post<Post>("api/admin/posts", data);
     return res.data;
   },
 
   async generatePost(id: number): Promise<Post> {
-    const res = await axiosClient.post<Post>(`/admin/posts/${id}/generate`);
+    const res = await axiosClient.post<Post>(`api/admin/posts/${id}/generate`);
     return res.data;
   },
 
   getById(id: number) {
-    return axiosClient.get<Post>(`/admin/posts/${id}`).then((res) => res.data);
+    return axiosClient.get<Post>(`api/admin/posts/${id}`).then((res) => res.data);
   },
 
   update(id: number, data: Partial<Post>) {
-    return axiosClient.put<Post>(`/admin/posts/${id}`, data).then((res) => res.data);
+    return axiosClient.put<Post>(`api/admin/posts/${id}`, data).then((res) => res.data);
   },
 
   delete(id: number) {
-    return axiosClient.delete<void>(`/admin/posts/${id}`).then((res) => res.data);
+    return axiosClient.delete<void>(`api/admin/posts/${id}`).then((res) => res.data);
   },
 
   restore(id: number) {
-    return axiosClient.put<void>(`/admin/posts/${id}/restore`).then((res) => res.data);
+    return axiosClient.put<void>(`api/admin/posts/${id}/restore`).then((res) => res.data);
   },
 
   publish(id: number) {
-    return axiosClient.put<void>(`/admin/posts/${id}/publish`).then((res) => res.data);
+    return axiosClient.put<void>(`api/admin/posts/${id}/publish`).then((res) => res.data);
   },
 };
 

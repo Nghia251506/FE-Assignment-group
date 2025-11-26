@@ -55,8 +55,8 @@ export const Login = createAsyncThunk<User, { username: string; password: string
 );
 
 // LOGOUT (nếu có endpoint xóa cookie)
-export const Logout = createAsyncThunk("auth/logout", async () => {
-  await axiosClient.post("/auth/logout"); // nếu có
+export const Logout = createAsyncThunk("api/auth/logout", async () => {
+  await axiosClient.post("api/auth/logout"); // nếu có
   // Nếu không có thì chỉ cần F5 là cookie vẫn còn → nhưng Redux sẽ xóa user
 });
 
