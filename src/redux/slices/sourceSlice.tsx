@@ -13,10 +13,12 @@ interface SourceState {
   loading: boolean;
   error?: string | null;
   defaultTenantId: number;
+  currentSource: Source | null;
 }
 
 const initialState: SourceState = {
   items: [],
+  currentSource: null,
   loading: false,
   error: null,
   defaultTenantId: 1,   // ✅ giống Category

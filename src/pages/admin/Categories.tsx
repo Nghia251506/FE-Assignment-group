@@ -99,7 +99,7 @@ export default function Categories() {
       name: "",
       description: "",
       isActive: true,
-      parentId: editingCategory?.parentId || null,
+      parentId: null,
     });
     setIsModalOpen(true);
   };
@@ -112,8 +112,9 @@ export default function Categories() {
       name: category.name || "",
       description: category.description || "",
       isActive: category.isActive ?? true,
-      parentId: editingCategory?.parentId || null,
+      parentId: category?.parentId || null,
     });
+    console.log(category)
     setIsModalOpen(true);
   };
 

@@ -15,6 +15,14 @@ export interface PageResponse<T> {
 
 export type UserRole = "ADMIN" | "EDITOR" | "VIEWER";
 
+export interface Dashboard {
+  totalPosts: number | 0;
+  totalUsers7d: number | 0;
+  todayUsers: number | 0;
+  totalSources: number | 0;
+  totalCategories: number | 0;
+}
+
 export interface User {
   id: number;
   username: string;

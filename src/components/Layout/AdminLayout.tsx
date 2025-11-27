@@ -1,6 +1,6 @@
 // --- THÊM 'useNavigate' VÀO IMPORT ---
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, FolderOpen, Globe, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, FolderOpen, Globe, Settings, LogOut, Menu, X, Tags } from 'lucide-react';
 import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from "../../redux/hooks";
 import { ToastContainer } from 'react-toastify';
@@ -19,8 +19,8 @@ export default function AdminLayout() {
     { path: '/sources', icon: Globe, label: 'Nguồn Trang' },
     { path: '/articles', icon: FileText, label: 'Bài Viết' },
     { path: '/categories', icon: FolderOpen, label: 'Danh Mục' },
-    { path: '/tags', icon: Settings, label: 'Tag' },
-    { path: '/settings', icon: Settings, label: 'Cấu Hình' },
+    { path: '/tags', icon: Tags, label: 'Tag' },
+    // { path: '/settings', icon: Settings, label: 'Cấu Hình' },
   ];
 
   // --- THÊM MỚI BƯỚC 2: Tạo hàm xử lý đăng xuất ---

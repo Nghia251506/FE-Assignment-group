@@ -25,6 +25,8 @@ import {
 import { fetchCategories } from "../../redux/slices/categorySlice";
 import type { Post } from "../../types/models";
 import { toast } from "react-toastify";
+import axiosClient from "../../api/axiosClient";
+import { useParams } from "react-router-dom";
 
 function getStatusLabel(status?: string) {
   switch (status) {
@@ -53,6 +55,38 @@ export default function Articles() {
   const { items: posts, loading } = useAppSelector((state: RootState) => state.post);
   const { items: categories } = useAppSelector((state: RootState) => state.category);
   const { items: tags } = useAppSelector((state: RootState) => state.tag);
+  const { slug } = useParams();
+  const [selectedPosts, setSelectedPosts] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedPosts([]);
+    } else {
+      setSelectedPosts(paginatedArticles.map(p => p.id!).filter(Boolean));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleSelectPost = (id: number) => {
+    setSelectedPosts(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+
+  useEffect(() => {
+    // CHỐNG VIEW ẢO: chỉ tăng view nếu chưa xem trong 24h
+    const viewedKey = `viewed_post_${slug}`;
+    const viewedTime = localStorage.getItem(viewedKey);
+
+    if (!viewedTime || Date.now() - Number(viewedTime) > 24 * 60 * 60 * 1000) {
+      axiosClient.post(`/admin/posts/${slug}/view`)
+        .catch(() => { }); // dù lỗi vẫn kệ, không ảnh hưởng user
+
+      localStorage.setItem(viewedKey, Date.now().toString());
+    }
+  }, [slug]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | string>("all");
@@ -121,7 +155,37 @@ export default function Articles() {
     }
     setIsModalOpen(true);
   };
+  useEffect(() => {
+    setSelectAll(false);
+  }, [currentPage, searchQuery, filterStatus]);
 
+  // HÀM XỬ LÝ HÀNG LOẠT (gọi API bulk-action)
+  const handleBulkAction = async (action: "publish" | "generate") => {
+    if (selectedPosts.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn ${action === "publish" ? "DUYỆT" : "GENERATE + DUYỆT"} ${selectedPosts.length} bài viết này không?`
+    );
+    if (!confirmed) return;
+
+    try {
+      await axiosClient.post("/admin/posts/bulk-action", {
+        postIds: selectedPosts,
+        action: action // "publish" hoặc "generate"
+      });
+
+      toast.success(`Đã ${action === "publish" ? "duyệt" : "generate + duyệt"} thành công ${selectedPosts.length} bài viết!`);
+
+      // Reset selection
+      setSelectedPosts([]);
+      setSelectAll(false);
+
+      // Reload danh sách
+      dispatch(fetchPosts({ page: 0, size: 1000 }) as any);
+    } catch (err) {
+      toast.error("Thao tác hàng loạt thất bại!");
+    }
+  };
   const handleSave = async () => {
     if (!formData.title.trim()) return toast.error("Tiêu đề không được để trống");
 
@@ -134,7 +198,7 @@ export default function Articles() {
       metaTitle: formData.metaTitle.trim() || undefined,
       metaDescription: formData.metaDescription.trim() || undefined,
       status: formData.status,
-      tagIds: formData.tagIds||[],
+      tagIds: formData.tagIds || [],
     };
 
     try {
@@ -166,7 +230,7 @@ export default function Articles() {
     if (!article.id) return;
     try {
       await dispatch(generatePost(article.id) as any).unwrap();
-      toast.success("Generate nội dung thành công");
+      toast.success("Generate slug thành công");
     } catch {
       toast.error("Generate thất bại");
     }
@@ -266,6 +330,38 @@ export default function Articles() {
           </select>
         </div>
       </div>
+      {selectedPosts.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={selectAll}
+              onChange={handleSelectAll}
+              className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+            />
+            <span className="font-semibold text-blue-900">
+              Đã chọn: <strong className="text-xl">{selectedPosts.length}</strong> bài viết
+            </span>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => handleBulkAction("publish")}
+              className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-md transition-all hover:shadow-lg"
+            >
+              <CheckCircle size={18} />
+              Duyệt tất cả
+            </button>
+            <button
+              onClick={() => handleBulkAction("generate")}
+              className="px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md transition-all hover:shadow-lg"
+            >
+              <Sparkles size={18} />
+              Generate + Duyệt
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* BẢNG HOÀN CHỈNH */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
@@ -279,6 +375,14 @@ export default function Articles() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
+                    <th className="px-6 py-3 text-left w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectAll}
+                        onChange={handleSelectAll}
+                        className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Bài viết</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Danh mục / Nguồn</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-700 uppercase tracking-wider">Trạng thái</th>
@@ -290,6 +394,14 @@ export default function Articles() {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {paginatedArticles.map((article) => (
                     <tr key={article.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedPosts.includes(article.id!)}
+                          onChange={() => handleSelectPost(article.id!)}
+                          className="w-5 h-5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-200">

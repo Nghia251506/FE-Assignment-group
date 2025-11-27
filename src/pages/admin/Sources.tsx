@@ -33,6 +33,8 @@ type SourceFormState = {
   note: string;
   thumbnailSelector: string; // <-- THÊM MỚI
   authorSelector: string;    // <-- THÊM MỚI
+  titleSelector: string;
+  contentSelector: string;
 };
 
 const DEFAULT_TENANT_ID = 1; // tạm thời cố định, anh có thể chỉnh sau
@@ -65,6 +67,8 @@ export default function Sources() {
     note: "",
     thumbnailSelector: "", // <-- THÊM MỚI
     authorSelector: "",    // <-- THÊM MỚI
+    titleSelector: "",
+    contentSelector: ""
   });
   const [runningSourceId, setRunningSourceId] = useState<number | null>(null);
 
@@ -146,6 +150,8 @@ export default function Sources() {
       note: "",
       thumbnailSelector: "", // <-- THÊM MỚI
       authorSelector: "",    // <-- THÊM MỚI
+      contentSelector: "",
+      titleSelector: "",
     });
     setIsModalOpen(true);
   };
@@ -164,6 +170,8 @@ export default function Sources() {
       note: src.note || "",
       thumbnailSelector: (src as any).thumbnailSelector || "", // <-- THÊM MỚI
       authorSelector: (src as any).authorSelector || "",    // <-- THÊM MỚI
+      contentSelector: src.contentSelector||"",
+      titleSelector: src.titleSelector||"",
     });
     setIsModalOpen(true);
   };
@@ -562,6 +570,40 @@ export default function Sources() {
                       setFormState((prev) => ({
                         ...prev,
                         listItemSelector: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder=".list_news .item a"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Title selector *
+                  </label>
+                  <input
+                    type="text"
+                    value={formState.titleSelector}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        titleSelector: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder=".list_news .item a"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Content selector *
+                  </label>
+                  <input
+                    type="text"
+                    value={formState.contentSelector}
+                    onChange={(e) =>
+                      setFormState((prev) => ({
+                        ...prev,
+                        contentSelector: e.target.value,
                       }))
                     }
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
