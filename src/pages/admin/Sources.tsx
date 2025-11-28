@@ -216,6 +216,14 @@ export default function Sources() {
       toast.error("Vui lòng chọn danh mục");
       return;
     }
+    if (!formState.titleSelector) {
+      toast.error("Vui lòng chọn danh mục");
+      return;
+    }
+    if (!formState.contentSelector) {
+      toast.error("Vui lòng chọn danh mục");
+      return;
+    }
 
     try {
       if (editingSource && editingSource.id) {
@@ -235,6 +243,8 @@ export default function Sources() {
               // --- THÊM DỮ LIỆU MỚI KHI UPDATE ---
               thumbnailSelector: formState.thumbnailSelector.trim() || undefined,
               authorSelector: formState.authorSelector.trim() || undefined,
+              titleSelector: formState.titleSelector.trim() || undefined,
+              contentSelector: formState.contentSelector.trim() || undefined
             },
           }) as any
         );
@@ -255,6 +265,8 @@ export default function Sources() {
             // --- THÊM DỮ LIỆU MỚI KHI CREATE ---
             thumbnailSelector: formState.thumbnailSelector.trim() || undefined,
             authorSelector: formState.authorSelector.trim() || undefined,
+            titleSelector: formState.titleSelector.trim() || undefined,
+            contentSelector: formState.contentSelector.trim() || undefined
           }) as any
         );
         toast.success("Tạo mới nguồn thành công");

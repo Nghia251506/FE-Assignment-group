@@ -98,8 +98,6 @@ export interface Post {
   thumbnail?: string;
   status: PostStatus;
   deleteStatus: DeleteStatus;
-  titleSelector:string;
-  contentSelector:string;
   publishedAt?: string;
   viewCount: number;
   createdBy?: number;
