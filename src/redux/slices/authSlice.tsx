@@ -1,70 +1,71 @@
-// src/redux/slices/authSlice.ts – PHIÊN BẢN THẦN THÁNH DÀNH RIÊNG CHO ANH NGHĨA!!!
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { loginApi } from "../../services/authService"; // giữ nguyên service của anh
+// src/redux/slices/authSlice.ts – PHIÊN BẢN CUỐI CÙNG, HOÀN HẢO NHẤT 2025!!!
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { loginApi } from "../../services/authService";
 import { User, UserRole } from "../../types/models";
-import { getUserFromJwt } from "../../utils/jwt"; // file decode JWT
 import axiosClient from "../../api/axiosClient";
 
-// STATE CHỈ CÓ currentUser, KHÔNG LƯU TOKEN VÀO LOCALSTORAGE
 interface AuthState {
   currentUser: User | null;
   loading: boolean;
   error: string | null;
 }
 
-// KHỞI TẠO USER TỪ JWT TRONG COOKIE KHI APP LOAD (F5 vẫn giữ login)
-const userFromCookie = getUserFromJwt();
+// KHÔNG ĐỌC JWT TỪ COOKIE NỮA → DÙNG API /auth/me ĐỂ CHECK
 const initialState: AuthState = {
-  currentUser: userFromCookie
-    ? {
-        id: userFromCookie.userId,
-        username: userFromCookie.sub,
-        roleCode: userFromCookie.roleCode as UserRole,
-        roleName: userFromCookie.roleName,
-        isActive: true, // mặc định true vì đang login được
-        // các field khác có thể để undefined
-      }
-    : null,
+  currentUser: null,
   loading: false,
   error: null,
 };
 
-// THUNK LOGIN – CHỈ GỌI API, ĐỌC USER TỪ COOKIE
-export const Login = createAsyncThunk<User, { username: string; password: string }>(
-  "auth/login",
-  async (dto, { rejectWithValue }) => {
+// THUNK: LOGIN → BE set cookie → gọi /me để lấy user
+export const Login = createAsyncThunk<
+  User,
+  { username: string; password: string },
+  { rejectValue: string }
+>("auth/login", async (dto, { rejectWithValue }) => {
+  try {
+    // B1: Gọi login → backend set HttpOnly cookie
+    await loginApi(dto);
+
+    // B2: Gọi /auth/me để backend đọc cookie và trả user
+    const res = await axiosClient.get("/auth/me");
+    return res.data as User;
+  } catch (err: any) {
+    const msg =
+      err.response?.data?.message ||
+      err.response?.data ||
+      "Sai tài khoản hoặc mật khẩu";
+    return rejectWithValue(msg);
+  }
+});
+
+// THUNK: KIỂM TRA ĐĂNG NHẬP KHI RELOAD TRANG (F5 vẫn login)
+export const checkAuth = createAsyncThunk<User, void, { rejectValue: string }>(
+  "auth/checkAuth",
+  async (_, { rejectWithValue }) => {
     try {
-      // Gọi login → BE set cookie HttpOnly
-      await loginApi(dto);
-
-      // Đọc user từ JWT trong cookie
-      const jwtUser = getUserFromJwt();
-      if (!jwtUser) throw new Error("Không thể đọc thông tin người dùng");
-
-      return {
-        id: jwtUser.userId,
-        username: jwtUser.sub,
-        roleCode: jwtUser.roleCode as UserRole,
-        roleName: jwtUser.roleName,
-        isActive: true,
-      } as User;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || "Sai tài khoản hoặc mật khẩu");
+      const res = await axiosClient.get("/auth/me");
+      return res.data as User;
+    } catch (err) {
+      return rejectWithValue("Phiên đăng nhập hết hạn");
     }
   }
 );
 
-// LOGOUT (nếu có endpoint xóa cookie)
+// THUNK: LOGOUT
 export const Logout = createAsyncThunk("auth/logout", async () => {
-  await axiosClient.post("/auth/logout"); // nếu có
-  // Nếu không có thì chỉ cần F5 là cookie vẫn còn → nhưng Redux sẽ xóa user
+  try {
+    await axiosClient.post("/auth/logout");
+  } catch (err) {
+    // Không sao nếu backend không có endpoint logout
+  }
 });
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    resetError: (state) => {
+    clearError: (state) => {
       state.error = null;
     },
     clearAuth: (state) => {
@@ -78,13 +79,26 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(Login.fulfilled, (state, action: PayloadAction<User>) => {
+      .addCase(Login.fulfilled, (state, action) => {
         state.loading = false;
         state.currentUser = action.payload;
       })
       .addCase(Login.rejected, (state, action) => {
         state.loading = false;
-        state.error = (action.payload as string) || "Đăng nhập thất bại";
+        state.error = action.payload || "Đăng nhập thất bại";
+        state.currentUser = null;
+      })
+
+      // CHECK AUTH (khi reload)
+      .addCase(checkAuth.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkAuth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentUser = action.payload;
+      })
+      .addCase(checkAuth.rejected, (state) => {
+        state.loading = false;
         state.currentUser = null;
       })
 
@@ -95,5 +109,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { resetError, clearAuth } = authSlice.actions;
+export const { clearError, clearAuth } = authSlice.actions;
 export default authSlice.reducer;
