@@ -184,6 +184,7 @@ export default function Sources() {
     if (!ok) return;
     try {
       await dispatch(deleteSource(src.id) as any);
+      dispatch(fetchSources() as any);
       toast.success("Xóa nguồn thành công");
     } catch (e) {
       console.error(e);
@@ -270,8 +271,9 @@ export default function Sources() {
           }) as any
         );
         toast.success("Tạo mới nguồn thành công");
+        
       }
-
+      dispatch(fetchSources() as any);
       setIsModalOpen(false);
       setEditingSource(null);
     } catch (err) {
