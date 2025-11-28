@@ -16,10 +16,29 @@ import Settings from './pages/admin/Settings';
 import LoginPage from './pages/LoginPage';
 import Tags from './pages/admin/Tags';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import { useEffect, useState } from 'react';
+import axiosClient from './api/axiosClient';
 
 function App() {
-  
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const res = await axiosClient.get('/auth/me');
+        setUser(res.data);
+      } catch (err) {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkLogin();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
   return (
     <BrowserRouter>
       <Routes>
