@@ -67,7 +67,7 @@ export default function Dashboard() {
       })));
 
       // GA4 WEEKLY + TÍNH TỔNG 7 NGÀY
-      const gaWeeklyRes = await axiosClient.get('/api/admin/weekly-users');
+      const gaWeeklyRes = await axiosClient.get('/admin/weekly-users');
       const weekly = gaWeeklyRes.data || [];
       const total7d = weekly.reduce((sum: number, day: any) => sum + (day.users || 0), 0);
 
