@@ -13,7 +13,7 @@ export interface PageResponse<T> {
 
 // --- USER ---
 
-export type UserRole = "ADMIN" | "EDITOR" | "VIEWER";
+export type UserRole = "ROLE_ADMIN" | "EDITOR" | "VIEWER";
 
 export interface Dashboard {
   totalPosts: number | 0;
