@@ -34,15 +34,15 @@ function App() {
   // <<< KẾT THÚC >>>
 
   // Loading screen đẹp (tùy anh chỉnh)
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
-        <div className="text-white text-2xl font-bold animate-pulse">
-          Đang tải Admin Panel...
-        </div>
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center">
+  //       <div className="text-white text-2xl font-bold animate-pulse">
+  //         Đang tải Admin Panel...
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <BrowserRouter>
