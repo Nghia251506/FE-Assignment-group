@@ -107,6 +107,8 @@ export default function Articles() {
     metaDescription: "",
     status: "draft" as "draft" | "pending" | "published",
     tagIds: [] as number[],
+    titleSelector:"",
+    contentSelector:""
   });
 
   useEffect(() => {
@@ -138,6 +140,8 @@ export default function Articles() {
         metaDescription: article.metaDescription || "",
         status: (article.status as any) || "draft",
         tagIds: [] as number[],
+        titleSelector:article.titleSelector|| "",
+        contentSelector:article.contentSelector || ""
       });
     } else {
       setEditingArticle(null);
@@ -151,6 +155,8 @@ export default function Articles() {
         metaDescription: "",
         status: "draft",
         tagIds: [] as number[],
+        titleSelector:"",
+        contentSelector:""
       });
     }
     setIsModalOpen(true);
