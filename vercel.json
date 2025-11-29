@@ -2,11 +2,13 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://api.muong14.xyz/api/$1"  
+      "destination": "https://api.muong14.xyz/api/$1"
     },
     {
       "source": "/(.*)",
       "destination": "/"
     }
-  ]
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
 }
